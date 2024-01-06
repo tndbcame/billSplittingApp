@@ -73,4 +73,4 @@ crashlytics-build.properties
 
 .DS_Store
 
-Assets/font/NotoSansJP-Regular SDF.asset
+Assets/font/*
