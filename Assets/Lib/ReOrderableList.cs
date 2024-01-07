@@ -132,6 +132,7 @@ public class ReOrderableList : MonoBehaviour {
 
 	/// <summary>モード切替コールバックの登録</summary>
 	public void AddOnChangeModeListener (UnityAction<bool> onChangeModeAction) {
+		Debug.Log("ccc");
 		if (onChangeModeAction != null) {
 			if (onChangeMode == null) { onChangeMode = new OnChangeModeCallback (); }
 			onChangeMode.AddListener (onChangeModeAction);
@@ -141,6 +142,7 @@ public class ReOrderableList : MonoBehaviour {
 	/// <summary>モード切替コールバックの除去</summary>
 	/// <param name="onChangeModeAction">nullなら全て</param>
 	public void RemoveOnChangeModeListener (UnityAction<bool> onChangeModeAction) {
+		Debug.Log("aaa");
 		if (onChangeModeAction != null) {
 			if (onChangeMode != null) {
 				onChangeMode.RemoveListener (onChangeModeAction);
@@ -152,6 +154,7 @@ public class ReOrderableList : MonoBehaviour {
 
 	/// <summary>項目選択コールバックの登録</summary>
 	public void AddOnSelectListener (UnityAction<int> onSelectAction) {
+		Debug.Log("bbb");
 		if (onSelectAction != null) {
 			if (onSelect == null) { onSelect = new OnReOrderCallback (); }
 			onSelect.AddListener (onSelectAction);
@@ -161,6 +164,7 @@ public class ReOrderableList : MonoBehaviour {
 	/// <summary>項目選択コールバックの除去</summary>
 	/// <param name="onSelectAction">nullなら全て</param>
 	public void RemoveOnSelectListener (UnityAction<int> onSelectAction) {
+		Debug.Log("eee");
 		if (onSelectAction != null) {
 			if (onSelect != null) {
 				onSelect.RemoveListener (onSelectAction);
@@ -172,6 +176,7 @@ public class ReOrderableList : MonoBehaviour {
 
 	/// <summary>並べ替え開始コールバックの登録</summary>
 	public void AddOnBeginOrderListener (UnityAction<int> onBeginOrderAction) {
+		Debug.Log("rrrr");
 		if (onBeginOrderAction != null) {
 			if (onBeginOrder == null) { onBeginOrder = new OnReOrderCallback (); }
 			onBeginOrder.AddListener (onBeginOrderAction);
@@ -181,6 +186,7 @@ public class ReOrderableList : MonoBehaviour {
 	/// <summary>並べ替え開始コールバックの除去</summary>
 	/// <param name="onBeginOrderAction">nullなら全て</param>
 	public void RemoveOnBeginOrderListener (UnityAction<int> onBeginOrderAction) {
+		Debug.Log("etttt");
 		if (onBeginOrderAction != null) {
 			if (onBeginOrder != null) {
 				onBeginOrder.RemoveListener (onBeginOrderAction);
@@ -192,6 +198,7 @@ public class ReOrderableList : MonoBehaviour {
 
 	/// <summary>並べ替え更新コールバックの登録</summary>
 	public void AddOnUpdateOrderListener (UnityAction<int> onUpdateOrderAction) {
+		Debug.Log("iiii");
 		if (onUpdateOrderAction != null) {
 			if (onUpdateOrder == null) { onUpdateOrder = new OnReOrderCallback (); }
 			onUpdateOrder.AddListener (onUpdateOrderAction);
@@ -201,6 +208,7 @@ public class ReOrderableList : MonoBehaviour {
 	/// <summary>並べ替え更新コールバックの除去</summary>
 	/// <param name="onUpdateOrderAction">nullなら全て</param>
 	public void RemoveOnUpdateOrderListener (UnityAction<int> onUpdateOrderAction) {
+		Debug.Log("oooo");
 		if (onUpdateOrderAction != null) {
 			if (onUpdateOrder != null) {
 				onUpdateOrder.RemoveListener (onUpdateOrderAction);
@@ -212,6 +220,7 @@ public class ReOrderableList : MonoBehaviour {
 
 	/// <summary>並べ替え終了コールバックの登録</summary>
 	public void AddOnEndOrderListener (UnityAction<int> onEndOrderAction) {
+		Debug.Log("wwwww");
 		if (onEndOrderAction != null) {
 			if (onEndOrder == null) { onEndOrder = new OnReOrderCallback (); }
 			onEndOrder.AddListener (onEndOrderAction);
@@ -308,7 +317,7 @@ public class ReOrderableList : MonoBehaviour {
 	/// <summary>項目が選択された</summary>
 	public void OnSelect (int index = -1) {
 		if (onSelect != null) {
-			Interactable = false;
+			//Interactable = false;
 			onSelect.Invoke (index);
 		}
 	}

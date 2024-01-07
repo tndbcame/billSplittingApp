@@ -1,8 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
 
-public class CalcItem : MonoBehaviour
+public class CalcItem
 {
     //ユーザー名
     private string userName;
