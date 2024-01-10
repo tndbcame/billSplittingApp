@@ -18,6 +18,7 @@ TagManager:
   - BottomLeft
   - UserView
   - UserAreaActive
+  - ContentArea
   layers:
   - Default
   - TransparentFX

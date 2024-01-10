@@ -15,6 +15,9 @@ public class Controller : MonoBehaviour
 
     void Start()
     {
+        //初めてロードする
+        Utility.ContentsFirstTimeLoad();
+        //支出を計算する
         Utility.CalcUserPeyment();
     }
 

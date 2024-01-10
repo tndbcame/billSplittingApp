@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
@@ -18,9 +19,6 @@ public class Utility : MonoBehaviour
     {
         //すべてのUserAreaを取得
         GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
-
-        //ユーザーごとの支出/収入をdictで管理
-        var UserTotalMoneyDict = new Dictionary<GameObject, int>();
 
         //ユーザーの支出リスト
         var calcPeymentList = new List<CalcItem>();
@@ -216,5 +214,79 @@ public class Utility : MonoBehaviour
         GameObject Content = GameObject.FindGameObjectWithTag("Content");
         Content.SetActive(false);
         Debug.Log(ContentbottomLeft.transform.localPosition);
+    }
+    /**
+    <summary>
+        ゲームをplayしたときに初め呼び出されデータをロードする
+        return : なし
+    </summary>
+    */
+    public static void ContentsFirstTimeLoad()
+    {
+        GameObject[] ContentsArea = GameObject.FindGameObjectsWithTag("ContentArea");
+        foreach (GameObject ContentArea in ContentsArea)
+        {
+            ElementIndex ContentAreaIndex = ContentArea.GetComponent<ElementIndex>();
+            ContensData.contents = SaveManager.load(ContentAreaIndex.Index);
+
+            if (1 == ContentAreaIndex.Index)
+            {
+                //コンテンツ名を格納
+                string contentsName = string.Format("<u color=#CB8652>{0}</u>\n<size=28><color=#CFCBC5><i>-select-</i>",
+                    ContensData.contents.contentsName);
+                ContentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = contentsName;
+
+                //ユーザー名を格納
+                GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
+
+                for (int i = 0; i < ContensData.contents.user.Count; i++)
+                {
+                    GameObject userArea;
+                    try
+                    {
+                        userArea = allUserArea[i];
+                    }
+                    catch (IndexOutOfRangeException)//userAreaがない場合はclone作成
+                    {
+                        GameObject Content = GameObject.FindGameObjectWithTag("Content");
+                        userArea = Instantiate(allUserArea[0], Vector3.zero, Quaternion.identity, Content.transform);
+                    }
+                    //ユーザー名を取得
+                    userArea.transform.GetChild(0).GetComponent<Transform>().
+                    GetChild(0).GetComponent<Transform>().
+                    GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text =
+                        ContensData.contents.user[i].userName;
+
+                    for (int j = 0; j < ContensData.contents.user[i].shousai.Count; j++)
+                    {
+                        Transform shousai;
+                        try
+                        {
+                            shousai = userArea.transform.GetChild(j + 2).GetComponent<Transform>();
+                        }
+                        catch (UnityException)//userAreaがない場合はclone作成
+                        {
+                            Transform _shousai = userArea.transform.GetChild(2).GetComponent<Transform>();
+                            shousai = Instantiate(_shousai, Vector3.zero, Quaternion.identity, userArea.transform);
+                        }
+                        //項目名を格納
+                        shousai.GetChild(1).GetComponent<Transform>().
+                            GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text =
+                            ContensData.contents.user[i].shousai[j].ItemName;
+
+                        //日付を格納
+                        shousai.GetChild(1).GetComponent<Transform>().
+                            GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text =
+                            ContensData.contents.user[i].shousai[j].date;
+
+                        //金額を格納
+                        shousai.GetChild(1).GetComponent<Transform>().
+                            GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text =
+                            ContensData.contents.user[i].shousai[j].money;
+
+                    }
+                }
+            }
+        }
     }
 }
