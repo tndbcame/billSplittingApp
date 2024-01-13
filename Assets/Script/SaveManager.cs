@@ -21,10 +21,44 @@ public static class SaveManager
     // クラス起動時にSaveファイルを読み取っておく
     static SaveManager()
     {
+        getSaveData();
+    }
+    /**
+    <summary>
+        データをセーブする
+        return : なし
+    </summary>
+    */
+    public static void save(int index, Contents contentsSd)
+    {
+        contentsSd.fileNo = index;
+        contentsSd.updateTime = DateTime.Now.ToString();
+        contentsSd.name = "セーブデータ" + index.ToString();
+        string json = JsonUtility.ToJson(contentsSd);
+        //TODObuildするときはここを変更する
+        string path = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
+        //string path = Directory.GetCurrentDirectory();
+        path += ("/" + SAVE_DIRECTORY + "/" + SAVE_FILE_NAME + index.ToString() + SAVE_FILE_TAIL);
+        Debug.Log(path);
+        createDirectory(Path.GetDirectoryName(path));
+        StreamWriter writer = new StreamWriter(path, false, Encoding.GetEncoding("UTF-8"));
+        writer.WriteLine(json);
+        writer.Flush();
+        writer.Close();
+        Debug.Log("AAA");
+    }
+    /**
+    <summary>
+        すべてのセーブデータを取得する
+        return : なし
+    </summary>
+    */
+    public static void getSaveData()
+    {
         //TODObuildするときはここを変更する
         // プロジェクトディレクトリを取得    
-        //string path = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
-        string path = Directory.GetCurrentDirectory();
+        string path = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
+        //string path = Directory.GetCurrentDirectory();
 
         // セーブデータの保存先ディレクトリを取得
         path += ("/" + SAVE_DIRECTORY + "/");
@@ -49,29 +83,6 @@ public static class SaveManager
     }
     /**
     <summary>
-        データをセーブする
-        return : なし
-    </summary>
-    */
-    public static void save(int index, Contents contentsSd)
-    {
-        contentsSd.fileNo = index;
-        contentsSd.updateTime = DateTime.Now.ToString();
-        contentsSd.name = "セーブデータ" + index.ToString();
-        string json = JsonUtility.ToJson(contentsSd);
-        //TODObuildするときはここを変更する
-        //string path = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
-        string path = Directory.GetCurrentDirectory();
-        path += ("/" + SAVE_DIRECTORY + "/" + SAVE_FILE_NAME + index.ToString() + SAVE_FILE_TAIL);
-        Debug.Log(path);
-        createDirectory(Path.GetDirectoryName(path));
-        StreamWriter writer = new StreamWriter(path, false, Encoding.GetEncoding("UTF-8"));
-        writer.WriteLine(json);
-        writer.Flush();
-        writer.Close();
-    }
-    /**
-    <summary>
         データがセーブデータを使用しない場合の初期値を設定
         return : なし
     </summary>
@@ -85,12 +96,12 @@ public static class SaveManager
         {
             User user = new User();
             user.userName = "ユーザー" + i;
-            user.index = 0;
+            user.index = i - 1;
             user.shousai = new List<Shousai>();
             Shousai shousai = new Shousai();
-            shousai.ItemName = "項目" + i;
+            shousai.ItemName = "項目名";
             shousai.index = 0;
-            shousai.money = "1000";
+            shousai.money = 1000;
             shousai.date = DateTime.Today.ToString("yyyy/M/d");
             user.shousai.Add(shousai);
             contentsSd.user.Add(user);

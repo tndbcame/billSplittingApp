@@ -19,6 +19,11 @@ TagManager:
   - UserView
   - UserAreaActive
   - ContentArea
+  - UserAreaClone
+  - AddItem
+  - ContentAreaClone
+  - ContentAreaParent
+  - AddUser
   layers:
   - Default
   - TransparentFX

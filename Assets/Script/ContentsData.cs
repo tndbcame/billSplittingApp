@@ -27,7 +27,7 @@ public class Shousai
 {
     public string ItemName;
     public int index;
-    public string money;
+    public int money;
     public string date;
 }
 
