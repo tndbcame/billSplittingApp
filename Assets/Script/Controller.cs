@@ -1,9 +1,6 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using Kyub.EmojiSearch.UI;
-using UnityEditor;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -21,6 +18,8 @@ public class Controller : MonoBehaviour
     private GameObject newUserBtn;
     //ユーザーネームボタン
     private GameObject userNameBtn;
+    //ユーザーネームチェックボタン
+    private GameObject userNameCheckBtn;
     //詳細項目ボタン
     private GameObject shousaiBtn;
     //詳細項目チェックボタン
@@ -107,10 +106,12 @@ public class Controller : MonoBehaviour
         return : なし
     </summary>
     */
-    public void OnAddItemArea()
+    public void OnAddItemOrUpdateArea(int status)
     {
+        if (!EditFlg)
+            return;
+        btnStatus = status;
         InputFiled.SetActive(true);
-        btnStatus = 1;
 
         //プレースホルダーに本日の日付を入力する
         inputArea.GetChild(2).GetComponent<Transform>().
@@ -118,7 +119,42 @@ public class Controller : MonoBehaviour
             GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
                 = DateTime.Today.ToString("yyyy/M/d");
         //押したボタンを取得
-        newItemBtn = eventSystem.currentSelectedGameObject;
+        if(btnStatus == 1)
+        {
+            newItemBtn = eventSystem.currentSelectedGameObject;
+        }
+        else if(btnStatus == 6)
+        {
+            shousaiBtn = eventSystem.currentSelectedGameObject;
+            string date = "";
+            //セーブデータ内のユーザーエリアと詳細エリアのIdを検索して日付を取得
+            int UserAreaId = shousaiBtn.transform.parent.GetComponent<Id>().id;
+            int shousaiAreaId = shousaiBtn.transform.GetComponent<Id>().id;
+            for (int i = 0; i < ContensData.contents.user.Count; i++)
+            {
+                if (ContensData.contents.user[i].index == UserAreaId)
+                {
+                    for (int j = 0; j < ContensData.contents.user[UserAreaId].shousai.Count; j++)
+                    {
+                        if (ContensData.contents.user[i].shousai[j].index == shousaiAreaId)
+                        {
+                            date = ContensData.contents.user[i].shousai[j].date;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            inputArea.GetChild(0).GetComponent<TMP_InputField>().text
+                = shousaiBtn.transform.GetChild(1).GetComponent<Transform>().
+                    GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
+            inputArea.GetChild(1).GetComponent<TMP_InputField>().text
+                = shousaiBtn.transform.GetChild(1).GetComponent<Transform>().
+                    GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text;
+            //日付は形式が異なるためセーブデータから直接取得する
+            inputArea.GetChild(2).GetComponent<TMP_InputField>().text
+                = date;
+        }
 
         //子を取得して関係ないオブジェクトをfalseにする
         int childCount = inputArea.transform.childCount;
@@ -138,17 +174,31 @@ public class Controller : MonoBehaviour
     }
     /**
     <summary>
-        ユーザー追加ボタンが押されたときの処理
+        ユーザー追加/編集ボタンが押されたときの処理
         return : なし
     </summary>
     */
-    public void OnAddUserArea()
+    public void OnAddOrUpdateUserArea(int status)
     {
+        if (!EditFlg)
+            return;
         InputFiled.SetActive(true);
-        btnStatus = 2;
+        btnStatus = status;
 
         //押したボタンを取得
-        newUserBtn = eventSystem.currentSelectedGameObject;
+        if(btnStatus == 2)
+        {
+            newUserBtn = eventSystem.currentSelectedGameObject;
+        }
+        else if(btnStatus == 5)
+        {
+            userNameBtn = eventSystem.currentSelectedGameObject;
+
+            inputArea.GetChild(7).
+                transform.GetComponent<TMP_InputField>().text
+                = userNameBtn.transform.GetChild(0).GetComponent<Transform>().
+                    GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
+        }
 
         //子を取得して関係ないオブジェクトをfalseにする
         int childCount = inputArea.transform.childCount;
@@ -182,11 +232,73 @@ public class Controller : MonoBehaviour
         {
             shousaiCheckBtn.transform.GetChild(0).GetComponent<Image>().enabled = false;
             shousaiCheckBtn.transform.GetChild(1).GetComponent<Image>().enabled = false;
+            btnStatus = 0;
         }
         else
         {
             shousaiCheckBtn.transform.GetChild(0).GetComponent<Image>().enabled = true;
             shousaiCheckBtn.transform.GetChild(1).GetComponent<Image>().enabled = true;
+            btnStatus = 3;
+        }
+        Utility.CalcUserPeyment();
+    }
+    /**
+<summary>
+    ユーザーエリアのチェックボタンが押されたときの処理
+    return : なし
+</summary>
+*/
+    public void OnUserCheckButton()
+    {
+        //ユーザーネームエリア
+        userNameCheckBtn = eventSystem.currentSelectedGameObject;
+        bool userNameCheckBtntatus = userNameCheckBtn.transform.GetChild(0).GetComponent<Image>().enabled;
+        
+        //ユーザーエリア取得
+        Transform userArea = userNameCheckBtn.transform.parent.parent.parent;
+
+        //追加エリア
+        Transform addArea =
+        userArea.GetChild(1).GetComponent<Transform>().
+            GetChild(0).GetComponent<Transform>().
+            GetChild(1).GetComponent<Transform>();
+
+
+
+        if (userNameCheckBtntatus)
+        {
+            userNameCheckBtn.transform.parent.GetChild(4).GetComponent<Transform>().
+            GetChild(0).GetComponent<Image>().enabled = false;
+            userNameCheckBtn.transform.GetChild(0).GetComponent<Image>().enabled = false;
+            addArea.transform.GetChild(0).GetComponent<Image>().enabled = false;
+            //詳細エリアは複数のため
+            for (int i = 2; i < userArea.childCount; i++)
+            {
+                Transform shousaiArea =
+                    userArea.GetChild(i).GetComponent<Transform>().
+                    GetChild(1).GetComponent<Transform>().
+                    GetChild(0).GetComponent<Transform>();
+                shousaiArea.transform.GetChild(0).GetComponent<Image>().enabled = false;
+                shousaiArea.transform.GetChild(1).GetComponent<Image>().enabled = false;
+            }
+            btnStatus = 0;
+        }
+        else
+        {
+            userNameCheckBtn.transform.parent.GetChild(4).GetComponent<Transform>().
+            GetChild(0).GetComponent<Image>().enabled = true;
+            userNameCheckBtn.transform.GetChild(0).GetComponent<Image>().enabled = true;
+            addArea.transform.GetChild(0).GetComponent<Image>().enabled = true;
+            for (int i = 2; i < userArea.childCount; i++)
+            {
+                Transform shousaiArea =
+                    userArea.GetChild(i).GetComponent<Transform>().
+                    GetChild(1).GetComponent<Transform>().
+                    GetChild(0).GetComponent<Transform>();
+                shousaiArea.transform.GetChild(0).GetComponent<Image>().enabled = true;
+                shousaiArea.transform.GetChild(1).GetComponent<Image>().enabled = true;
+            }
+            btnStatus = 4;
         }
         Utility.CalcUserPeyment();
     }
@@ -200,7 +312,15 @@ public class Controller : MonoBehaviour
     {
         //TODOデータが存在しないときにここで削除するとエラーになる問題を解決する
         ContensData.contents = SaveManager.saveDatas[ContentsStatus];
-        Utility.deleteShousaiArea(ContensData.contents);
+        if(btnStatus == 3)
+        {
+            Utility.deleteShousaiArea(ContensData.contents);
+        }
+        else if(btnStatus == 4)
+        {
+            Utility.deleteUserArea(ContensData.contents);
+        }
+        
     }
     /**
     <summary>
@@ -212,21 +332,27 @@ public class Controller : MonoBehaviour
     {
         //セーブデータを呼び出して該当のコンテンツを取得する
         SaveManager.getSaveData();
+        ContensData.contents = SaveManager.saveDatas[ContentsStatus];
 
         switch (btnStatus)
         {
             case 1:
                 //押したボタンの親オブジェクトを取得
                 Transform UserArea = newItemBtn.transform.parent;
-                ContensData.contents = SaveManager.saveDatas[ContentsStatus];
                 Utility.OnNewItemHozon(inputArea, ContensData.contents, UserArea);
                 break;
             case 2:
                 //押したボタンの親オブジェクトを取得
                 Transform userAreaPrent = newUserBtn.transform.parent;
-                ContensData.contents = SaveManager.saveDatas[ContentsStatus];
                 Utility.OnNewUserHozon(inputArea, ContensData.contents, userAreaPrent);
                 break;
+            case 5:
+                Utility.editUserNameAreaHozon(inputArea, ContensData.contents, userNameBtn.transform);
+                break;
+            case 6:
+                Utility.editShousaiAreaHozon(inputArea, ContensData.contents, shousaiBtn.transform);
+                break;
+
         }
         Utility.CalcUserPeyment();
         InputFiled.SetActive(false);

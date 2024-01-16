@@ -21,6 +21,7 @@ public static class SaveManager
     // クラス起動時にSaveファイルを読み取っておく
     static SaveManager()
     {
+        Debug.Log("SaveManagerClass起動");
         getSaveData();
     }
     /**
@@ -36,16 +37,17 @@ public static class SaveManager
         contentsSd.name = "セーブデータ" + index.ToString();
         string json = JsonUtility.ToJson(contentsSd);
         //TODObuildするときはここを変更する
-        string path = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
-        //string path = Directory.GetCurrentDirectory();
+        // string path = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
+        // IOS(クラウドに保存されないような設定が必要)
+        // string path = Application.persistentDataPath;
+        // unity
+        string path = Directory.GetCurrentDirectory();
         path += ("/" + SAVE_DIRECTORY + "/" + SAVE_FILE_NAME + index.ToString() + SAVE_FILE_TAIL);
-        Debug.Log(path);
         createDirectory(Path.GetDirectoryName(path));
         StreamWriter writer = new StreamWriter(path, false, Encoding.GetEncoding("UTF-8"));
         writer.WriteLine(json);
         writer.Flush();
         writer.Close();
-        Debug.Log("AAA");
     }
     /**
     <summary>
@@ -57,9 +59,10 @@ public static class SaveManager
     {
         //TODObuildするときはここを変更する
         // プロジェクトディレクトリを取得    
-        string path = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
-        //string path = Directory.GetCurrentDirectory();
-
+        // IOS(クラウドに保存されないような設定が必要)
+        // string path = Application.persistentDataPath;
+        // unity
+        string path = Directory.GetCurrentDirectory();
         // セーブデータの保存先ディレクトリを取得
         path += ("/" + SAVE_DIRECTORY + "/");
         createDirectory(Path.GetDirectoryName(path));

@@ -26,12 +26,25 @@ public class Utility : MonoBehaviour
 
         //ユーザーが払ったすべてのお金の合計値
         int totalPayment = 0;
-            
+
+        //消されるユーザーがチェックする
+        int userAreadeleteCount = 0;
+        foreach (GameObject userArea in allUserArea)
+        {
+            if (userArea.transform.GetChild(0).GetComponent<Transform>().
+              GetChild(0).GetComponent<Transform>().
+              GetChild(0).GetComponent<Transform>().
+              GetChild(0).GetComponent<Image>().enabled)
+            {
+                userAreadeleteCount++;
+            }
+        }
+
         //ユーザーごとに支出と収入を計算する
         foreach (GameObject userArea in allUserArea)
         {
-            //ユーザー名を取得
-            TMP_EmojiTextUGUI userName =
+            //ユーザー名(テキスト)を取得
+            TMP_EmojiTextUGUI userNameTxt =
                     userArea.transform.GetChild(0).GetComponent<Transform>().
                     GetChild(0).GetComponent<Transform>().
                     GetChild(1).GetComponent<TMP_EmojiTextUGUI>();
@@ -83,7 +96,7 @@ public class Utility : MonoBehaviour
                 CalcItem calcItem = new CalcItem();
 
                 //ユーザー名を格納
-                calcItem.userNameProperty = userName.text;
+                calcItem.userNameProperty = userNameTxt.text;
 
                 //支払ってもらう対象ユーザーを格納
                 calcItem.targetUserProperty = peymentTarget;
@@ -91,7 +104,7 @@ public class Utility : MonoBehaviour
                 //ユーザー数を判定
                 if (peymentTarget[0] == "")
                 {
-                    calcItem.targetUserCountProperty = allUserArea.Length;
+                    calcItem.targetUserCountProperty = allUserArea.Length - userAreadeleteCount;
                 }
                 else
                 {
@@ -115,13 +128,19 @@ public class Utility : MonoBehaviour
         //ユーザーごとにlistにまとめた情報を整理して最終的な計算結果を算出する
         foreach (GameObject userArea in allUserArea)
         {
+            //消されるユーザーの場合はスキップ
+            if (userArea.transform.GetChild(0).GetComponent<Transform>().
+              GetChild(0).GetComponent<Transform>().
+              GetChild(0).GetComponent<Transform>().
+              GetChild(0).GetComponent<Image>().enabled)
+                continue;
+
             int UserTotalMoney = 0;
 
             //ユーザー名を取得
             Transform userName =
                 userArea.transform.GetChild(0).GetComponent<Transform>().
                 GetChild(0).GetComponent<Transform>();
-
 
             TextMeshProUGUI userNameText =
                     userName.GetChild(1).GetComponent<TextMeshProUGUI>();
@@ -584,6 +603,7 @@ public class Utility : MonoBehaviour
         Transform userName =
             inputArea.GetChild(7).GetComponent<Transform>().
             GetChild(0).GetComponent<Transform>();
+
         //テキスト取得
         string userNameTxt;
 
@@ -674,7 +694,6 @@ public class Utility : MonoBehaviour
         int index = 0;
         Transform tfm;
         List<int> nums = new List<int>();
-        Debug.Log(UserArea.childCount);
         for (int i = 0; i < UserArea.childCount; i++)
         {
             tfm = UserArea.GetChild(i).GetComponent<Transform>();
@@ -729,5 +748,133 @@ public class Utility : MonoBehaviour
                 SaveManager.save(Controller.ContentsStatus, contents);
             }
         }
+    }
+    /**
+    <summary>
+        ユーザーエリアの削除をする
+        return : なし
+    </summary>
+    */
+    public static void deleteUserArea(Contents contents)
+    {
+        GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
+        foreach (GameObject userArea in allUserArea)
+        {
+            //チェックボタンの状態を取得して判定
+            bool userNameAreaCheckBtnStatus =
+                 userArea.transform.GetChild(0).GetComponent<Transform>().
+                 GetChild(0).GetComponent<Transform>().
+                 GetChild(0).GetComponent<Transform>().
+                 GetChild(0).GetComponent<Image>().enabled;
+            if (userNameAreaCheckBtnStatus)
+            {
+                //セーブデータ内のユーザーエリアのIdを検索して削除
+                int UserAreaId = userArea.transform.GetComponent<Id>().id;
+                for (int i = 0; i < contents.user.Count; i++)
+                {
+                    if (contents.user[i].index == UserAreaId)
+                    {
+                        contents.user.Remove(contents.user[i]);
+                    }
+                }
+                //UIを削除
+                Destroy(userArea);
+                userArea.SetActive(false);
+                Canvas.ForceUpdateCanvases();
+                userArea.SetActive(true);
+                //セーブする
+                SaveManager.save(Controller.ContentsStatus, contents);
+            }
+        }
+    }
+    /**
+    <summary>
+        ユーザーネームを編集して保存する
+        return : なし
+    </summary>
+    */
+    public static void editUserNameAreaHozon(Transform inputArea, Contents contents, Transform userName)
+    {
+
+        int userNameId = userName.GetComponent<Id>().id;
+
+        string userNameTxt =
+        inputArea.transform.GetChild(7).GetComponent<Transform>().
+                GetChild(0).GetComponent<Transform>().
+                GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
+
+        //UIに反映
+        userName.transform.GetChild(0).GetComponent<Transform>().
+            GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
+            = userNameTxt;
+
+        //セーブデータに反映
+        for (int i = 0; i< contents.user.Count; i++)
+        {
+           if(contents.user[i].index == userNameId)
+            {
+                contents.user[i].userName = userNameTxt;
+            }
+        }
+
+        //セーブする
+        SaveManager.save(Controller.ContentsStatus, contents);
+    }
+    /**
+    <summary>
+        詳細エリアを編集して保存する
+        return : なし
+    </summary>
+    */
+    public static void editShousaiAreaHozon(Transform inputArea, Contents contents, Transform shousai)
+    {
+
+        int shousaiId = shousai.GetComponent<Id>().id;
+        int userNameId = shousai.parent.GetComponent<Id>().id;
+
+        string itemTxt =
+        inputArea.GetChild(0).GetComponent<Transform>().
+                GetChild(0).GetComponent<Transform>().
+                GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
+        string moneyTxt_ =
+        inputArea.GetChild(1).GetComponent<Transform>().
+                GetChild(0).GetComponent<Transform>().
+                GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
+        int moneyTxt = int.Parse(Regex.Replace(moneyTxt_, @"[^0-9]", ""));
+        string dateTxt =
+        inputArea.GetChild(2).GetComponent<Transform>().
+                GetChild(0).GetComponent<Transform>().
+                GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
+
+        //UIに反映
+        shousai.transform.GetChild(1).GetComponent<Transform>().
+            GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
+            = itemTxt;
+        shousai.transform.GetChild(1).GetComponent<Transform>().
+            GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text
+            = dateTxt.Substring(5);
+        shousai.transform.GetChild(1).GetComponent<Transform>().
+            GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text
+            = "¥" + moneyTxt.ToString("N0");
+
+        //セーブデータに反映
+        for (int i = 0; i < contents.user.Count; i++)
+        {
+            if (contents.user[i].index == userNameId)
+            {
+                for (int j = 0; j < contents.user[i].shousai.Count; j++)
+                {
+                    if(contents.user[i].shousai[j].index == shousaiId)
+                    {
+                        contents.user[i].shousai[j].ItemName = itemTxt;
+                        contents.user[i].shousai[j].money = moneyTxt;
+                        contents.user[i].shousai[j].date = dateTxt;
+                    }
+                }
+            }
+        }
+
+        //セーブする
+        SaveManager.save(Controller.ContentsStatus, contents);
     }
 }

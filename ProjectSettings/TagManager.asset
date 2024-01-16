@@ -24,6 +24,8 @@ TagManager:
   - ContentAreaClone
   - ContentAreaParent
   - AddUser
+  - Goukei
+  - UserAreaCloneNoShousaiArea
   layers:
   - Default
   - TransparentFX
