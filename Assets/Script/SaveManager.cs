@@ -76,7 +76,8 @@ public static class SaveManager
                 string json = reader.ReadToEnd();
                 reader.Close();
                 Contents sd = JsonUtility.FromJson<Contents>(json);
-                saveDatas.Add(sd.fileNo, sd);
+                if (!saveDatas.ContainsKey(sd.fileNo))
+                    saveDatas.Add(sd.fileNo, sd);
             }
             catch (Exception e)
             {

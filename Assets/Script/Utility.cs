@@ -16,7 +16,7 @@ public class Utility : MonoBehaviour
         return : なし
     </summary>
     */
-    public static void CalcUserPeyment()
+    public static void calcUserPeyment()
     {
         //すべてのUserAreaを取得
         GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
@@ -204,7 +204,7 @@ public class Utility : MonoBehaviour
         return : なし
     </summary>
     */
-    public static void OnChangeEditModeListener(GameObject obj, ScrollRect scrollRect, bool orderable)
+    public static void onChangeEditModeListener(GameObject obj, ScrollRect scrollRect, bool orderable)
     {
         Transform parentArea;
         GameObject ContentbottomLeft = GameObject.FindGameObjectWithTag("ContentbottomLeft");
@@ -284,7 +284,7 @@ public class Utility : MonoBehaviour
         return : なし
     </summary>
     */
-    public static void loadDataAtFirstTime()
+    public static void loadContentAtFirstTime()
     {
         for (int n = 1; n == 1 || SaveManager.saveDatas.ContainsKey(n); n++)
         {
@@ -292,41 +292,72 @@ public class Utility : MonoBehaviour
             //クローン用コンテンツ取得
             GameObject contentArea = getContentArea();
 
-            ElementIndex ContentAreaIndex = contentArea.GetComponent<ElementIndex>();
+            Id ContentAreaIndex = contentArea.GetComponent<Id>();
 
             if (SaveManager.saveDatas.ContainsKey(n))
             {
-                ContentAreaIndex.Index = ContensData.contents.fileNo;
+                ContentAreaIndex.id = ContensData.contents.fileNo;
             }
             //データが存在しないときにこっちの分岐に入る
             else
             {
-                ContentAreaIndex.Index = 1;
+                ContentAreaIndex.id = 1;
             }
             //順番を整える
-            contentArea.transform.SetSiblingIndex(ContentAreaIndex.Index - 1);
+            contentArea.transform.SetSiblingIndex(ContentAreaIndex.id - 1);
+            //コンテンツ名を格納
+            contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = ContensData.contents.contentsName;
 
             //セーブデータ1が初期表示
-            if (1 == ContentAreaIndex.Index)
+            if (1 == ContentAreaIndex.id)
             {
                 generateContent(contentArea, ContensData.contents);
 
                 //コンテンツステータスを更新
-                Controller.ContentsStatus = ContentAreaIndex.Index;
+                Controller.ContentsStatus = ContentAreaIndex.id;
             }
 
             //セーブデータが存在しない場合はセーブする
             if (!SaveManager.saveDatas.ContainsKey(n))
             {
-                SaveManager.save(ContentAreaIndex.Index, ContensData.contents);
+                SaveManager.save(ContentAreaIndex.id, ContensData.contents);
             }
         }
     }
-    public static void chengeContentArea(GameObject contentArea)
+    /**
+    <summary>
+        コンテンツデータをロードする
+        return : なし
+    </summary>
+    */
+    public static void loadContent(int id, GameObject contentArea, int oldContentStatus)
     {
-        //渡されたコンテンツのIndexもとにセーブデータを検索する
-        ElementIndex ContentAreaIndex = contentArea.GetComponent<ElementIndex>();
-        ContensData.contents = SaveManager.load(ContentAreaIndex.Index);
+        ContensData.contents = SaveManager.load(id);
+
+        //ユーザーエリアを削除
+        GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
+        foreach(GameObject userArea in allUserArea)
+        {
+            //ここをfalseにしないとFindGameObjectsWithTagでヒットしてしまうため
+            userArea.SetActive(false);
+            Destroy(userArea);
+        }
+        //他のコンテンツエリアの表示を変更
+        GameObject[] contentsArea = GameObject.FindGameObjectsWithTag("ContentArea");
+        foreach(GameObject contentArea_ in contentsArea)
+        {
+            if(contentArea_.transform.GetComponent<Id>().id == oldContentStatus)
+            {
+                //フォーマットを元に戻す
+                processContentName2(contentArea_);
+                break;
+            }
+        }
+        contentArea.SetActive(false);
+        //UIを生成
+        generateContent(contentArea, ContensData.contents);
+        //コンテンツステータスを更新
+        Controller.ContentsStatus = id;
     }
     /**
     <summary>
@@ -353,7 +384,6 @@ public class Utility : MonoBehaviour
             {
                 userArea = getUserArea(false);
             }
-
             //Idを設定
             userArea.GetComponent<Id>().id = i;
             //ユーザー名を取得
@@ -402,7 +432,7 @@ public class Utility : MonoBehaviour
     }
     /**
     <summary>
-        コンテンツ名を加工する(引数：1個目が加工するコンテンツオブジェクト、2個目が加工に使われるデータ)
+        コンテンツ名を加工する(選択状態にする)(引数：1個目が加工するコンテンツオブジェクト、2個目が加工に使われるデータ)
         return : なし
     </summary>
     */
@@ -418,6 +448,29 @@ public class Utility : MonoBehaviour
         contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().fontSize = 40;
         contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().color
             = new Color(0.8235294f, 0.6431373f, 0.3882353f, 1.0f);
+        //リフレッシュ
+        contentArea.SetActive(false);
+        Canvas.ForceUpdateCanvases();
+        contentArea.SetActive(true);
+
+    }
+    /**
+    <summary>
+        コンテンツ名を加工する(選択状態でないやつに戻す)(引数：1個目が加工するコンテンツオブジェクト、2個目が加工に使われるデータ)
+        return : なし
+    </summary>
+    */
+    public static void processContentName2(GameObject contentArea)
+    {
+        Vector2 ca = contentArea.transform.GetChild(0).GetComponent<RectTransform>().sizeDelta;
+        ca.y = 80;
+        contentArea.transform.GetChild(0).GetComponent<RectTransform>().sizeDelta = ca;
+        contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text =
+            removeContentNameFormat(contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text);
+        contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().alignment = TextAlignmentOptions.Bottom;
+        contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().fontSize = 30;
+        contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().color
+            = new Color(0.8117647f, 0.7960784f, 0.772549f, 1.0f);
     }
     /**
     <summary>
@@ -498,7 +551,7 @@ public class Utility : MonoBehaviour
         return : なし
     </summary>
     */
-    public static void OnNewItemHozon(Transform inputArea, Contents contents, Transform UserArea)
+    public static void onNewItemHozon(Transform inputArea, Contents contents, Transform UserArea)
     {
         //項目
         Transform item =
@@ -597,7 +650,7 @@ public class Utility : MonoBehaviour
         return : なし
     </summary>
     */
-    public static void OnNewUserHozon(Transform inputArea, Contents contents, Transform UserArea)
+    public static void onNewUserHozon(Transform inputArea, Contents contents)
     {
         //インプットエリア取得
         Transform userName =
@@ -633,7 +686,7 @@ public class Utility : MonoBehaviour
             userNameTxt = userName.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
         }
         //重複しないように編集
-        userNameTxt = generateDuplicates(userNameTxt, contents);
+        userNameTxt = generateNotDuplicates(userNameTxt, contents);
 
         userArea.transform.GetChild(0).GetComponent<Transform>().
         GetChild(0).GetComponent<Transform>().
@@ -664,11 +717,58 @@ public class Utility : MonoBehaviour
     }
     /**
     <summary>
+        コンテンツ追加ボタンが押されたときの処理(引数：inputArea,)
+        return : なし
+    </summary>
+    */
+    public static void onNewContentHozon(Transform inputArea, Transform addBtn)
+    {
+        Transform contentName =
+            inputArea.GetChild(10).GetComponent<Transform>().
+            GetChild(0).GetComponent<Transform>();
+        //新しいコンテンツを取得
+        GameObject contentArea = getContentArea();
+
+        string contentNameTxt = "";
+
+        //ファイルNoの最大値+1を新しいファイルNoとして追加する
+        List<int> nums = new List<int>();
+        foreach (Contents content in SaveManager.saveDatas.Values)
+        {
+            nums.Add(content.fileNo);
+        }
+        ContensData.contents = SaveManager.load(nums.Max() + 1);
+
+        if ("​".Equals(contentName.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text))
+        {
+            //プレースホルダー
+            contentNameTxt = contentName.GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
+        }
+        else
+        {
+            contentNameTxt = contentName.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
+        }
+
+        //UIに格納
+        contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = contentNameTxt;
+        contentArea.transform.GetComponent<Id>().id = nums.Max() + 1;
+
+        //セーブデータに格納してセーブする
+        ContensData.contents.contentsName = contentNameTxt;
+        SaveManager.save(nums.Max() + 1, ContensData.contents);
+        //セーブしたデータを使えるように保持する
+        SaveManager.getSaveData();
+
+        Canvas.ForceUpdateCanvases();
+        addBtn.SetAsLastSibling();
+    }
+    /**
+    <summary>
         ユーザー名が重複しないように加工(引数：ユーザー名の文字列, contents)
         return : なし
     </summary>
     */
-    public static string generateDuplicates(string userNameTxt, Contents contents)
+    public static string generateNotDuplicates(string userNameTxt, Contents contents)
     {
         int j = 0;
         string _userNameTxt = userNameTxt;
@@ -726,13 +826,13 @@ public class Utility : MonoBehaviour
                 //セーブデータ内のユーザーエリアと詳細エリアのIdを検索して削除
                 int UserAreaId = shousaiArea.transform.parent.GetComponent<Id>().id;
                 int shousaiAreaId = shousaiArea.transform.GetComponent<Id>().id;
-                for(int i = 0; i < contents.user.Count; i++)
+                for (int i = 0; i < contents.user.Count; i++)
                 {
-                    if(contents.user[i].index == UserAreaId)
+                    if (contents.user[i].index == UserAreaId)
                     {
                         for (int j = 0; j < contents.user[UserAreaId].shousai.Count; j++)
                         {
-                            if(contents.user[i].shousai[j].index == shousaiAreaId)
+                            if (contents.user[i].shousai[j].index == shousaiAreaId)
                             {
                                 contents.user[i].shousai.Remove(contents.user[i].shousai[j]);
                             }
@@ -809,9 +909,9 @@ public class Utility : MonoBehaviour
             = userNameTxt;
 
         //セーブデータに反映
-        for (int i = 0; i< contents.user.Count; i++)
+        for (int i = 0; i < contents.user.Count; i++)
         {
-           if(contents.user[i].index == userNameId)
+            if (contents.user[i].index == userNameId)
             {
                 contents.user[i].userName = userNameTxt;
             }
@@ -864,7 +964,7 @@ public class Utility : MonoBehaviour
             {
                 for (int j = 0; j < contents.user[i].shousai.Count; j++)
                 {
-                    if(contents.user[i].shousai[j].index == shousaiId)
+                    if (contents.user[i].shousai[j].index == shousaiId)
                     {
                         contents.user[i].shousai[j].ItemName = itemTxt;
                         contents.user[i].shousai[j].money = moneyTxt;
@@ -876,5 +976,50 @@ public class Utility : MonoBehaviour
 
         //セーブする
         SaveManager.save(Controller.ContentsStatus, contents);
+    }
+    public static void editContentHozon(Transform inputArea, Transform contentArea)
+    {
+        Transform contentName =
+            inputArea.GetChild(10).GetComponent<Transform>().
+            GetChild(0).GetComponent<Transform>();
+
+        string contentNameTxt = "";
+
+        //ファイルNoの最大値+1を新しいファイルNoとして追加する
+        int contentAreaId = contentArea.GetComponent<Id>().id;
+        foreach (Contents content in SaveManager.saveDatas.Values)
+        {
+            if (contentAreaId == content.fileNo)
+            {
+                if ("​".Equals(contentName.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text))
+                {
+                    //プレースホルダー
+                    contentNameTxt = contentName.GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
+                }
+                else
+                {
+                    contentNameTxt = contentName.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
+                }
+                content.contentsName = contentNameTxt;
+                contentArea.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = contentNameTxt;
+                processContentName(contentArea.gameObject, content);
+                contentArea.gameObject.SetActive(false);
+                Canvas.ForceUpdateCanvases();
+                contentArea.gameObject.SetActive(true);
+                break;
+            }
+        }
+
+        //セーブデータに格納してセーブする
+        ContensData.contents.contentsName = contentNameTxt;
+        SaveManager.save(contentAreaId, ContensData.contents);
+    }
+    public static string removeContentNameFormat(string text)
+    {
+        var target_str = "</u>\n<size=28><color=#CFCBC5><i>-select-</i>";
+        var target_str2 = "<u color=#CB8652>";
+        string text_ = text.Substring(0, text.IndexOf(target_str));
+        text_ = text_.Substring(target_str2.Length);
+        return text_;
     }
 }

@@ -13,9 +13,11 @@ public class Controller : MonoBehaviour
     //キャッシュ用のオブジェクト
     private Transform inputArea;
     //新しい項目を追加をするボタン
-    private GameObject newItemBtn;
+    private GameObject addItemBtn;
     //新しいユーザーを追加をするボタン
-    private GameObject newUserBtn;
+    private GameObject addUserBtn;
+    //コンテンツ追加ボタン
+    private GameObject addContentBtn;
     //ユーザーネームボタン
     private GameObject userNameBtn;
     //ユーザーネームチェックボタン
@@ -24,6 +26,10 @@ public class Controller : MonoBehaviour
     private GameObject shousaiBtn;
     //詳細項目チェックボタン
     private GameObject shousaiCheckBtn;
+    //コンテンツボタン
+    private GameObject contentBtn;
+    //矢印ボタン
+    private GameObject arrowBtn;
     //押したボタンの状態を管理
     private int btnStatus;
     //押したボタンを取得するためのGameObject型の変数
@@ -38,9 +44,9 @@ public class Controller : MonoBehaviour
     void Start()
     {
         //初めてロードする
-        Utility.loadDataAtFirstTime();
+        Utility.loadContentAtFirstTime();
         //支出を計算する
-        Utility.CalcUserPeyment();
+        Utility.calcUserPeyment();
         //InputFiledからテキストを取得しやすいようにキャッシュ
         inputArea = InputFiled.transform.GetChild(0).GetComponent<Transform>();
     }
@@ -57,7 +63,7 @@ public class Controller : MonoBehaviour
                 EditFlg = false;
                 LongTap.isDown = false;
                 button_ob = eventSystem.currentSelectedGameObject;
-                Utility.OnChangeEditModeListener(button_ob, scrollRect, true);
+                Utility.onChangeEditModeListener(button_ob, scrollRect, true);
             }
         }
     }
@@ -106,7 +112,7 @@ public class Controller : MonoBehaviour
         return : なし
     </summary>
     */
-    public void OnAddItemOrUpdateArea(int status)
+    public void OnAddOrUpdateItemArea(int status)
     {
         if (!EditFlg)
             return;
@@ -121,7 +127,7 @@ public class Controller : MonoBehaviour
         //押したボタンを取得
         if(btnStatus == 1)
         {
-            newItemBtn = eventSystem.currentSelectedGameObject;
+            addItemBtn = eventSystem.currentSelectedGameObject;
         }
         else if(btnStatus == 6)
         {
@@ -162,7 +168,7 @@ public class Controller : MonoBehaviour
         {
             Transform child =
                     inputArea.transform.GetChild(i).GetComponent<Transform>();
-            if (child.tag == "AddUser")
+            if (child.tag == "AddUser" || child.tag == "AddContent")
             {
                 child.gameObject.SetActive(false);
             }
@@ -188,7 +194,7 @@ public class Controller : MonoBehaviour
         //押したボタンを取得
         if(btnStatus == 2)
         {
-            newUserBtn = eventSystem.currentSelectedGameObject;
+            addUserBtn = eventSystem.currentSelectedGameObject;
         }
         else if(btnStatus == 5)
         {
@@ -210,7 +216,52 @@ public class Controller : MonoBehaviour
             {
                 child.gameObject.SetActive(true);
             }
-            else if (child.tag == "AddItem")
+            else if (child.tag == "AddItem" || child.tag == "AddContent")
+            {
+                child.gameObject.SetActive(false);
+            }
+        }
+    }
+    /**
+    <summary>
+        コンテンツの追加/編集ボタンが押されたときの処理
+        return : なし
+    </summary>
+    */
+    public void OnAddOrUpdateContent(int status)
+    {
+        if (!EditFlg)
+            return;
+
+        btnStatus = status;
+        if (btnStatus == 7)
+        {
+            addContentBtn = eventSystem.currentSelectedGameObject;
+        }
+        else if (btnStatus == 8)
+        {
+            contentBtn = eventSystem.currentSelectedGameObject;
+
+            //選択されていない場合は終了
+            if (contentBtn.GetComponent<Id>().id != ContentsStatus)
+                return;
+
+            inputArea.GetChild(10).
+                transform.GetComponent<TMP_InputField>().text
+                = Utility.removeContentNameFormat(contentBtn.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text);
+        }
+        InputFiled.SetActive(true);
+        //子を取得して関係ないオブジェクトをfalseにする
+        int childCount = inputArea.transform.childCount;
+        for (int i = 0; i < childCount; i++)
+        {
+            Transform child =
+                    inputArea.transform.GetChild(i).GetComponent<Transform>();
+            if (child.tag == "AddContent")
+            {
+                child.gameObject.SetActive(true);
+            }
+            else if (child.tag == "AddItem" || child.tag == "AddUser")
             {
                 child.gameObject.SetActive(false);
             }
@@ -240,7 +291,7 @@ public class Controller : MonoBehaviour
             shousaiCheckBtn.transform.GetChild(1).GetComponent<Image>().enabled = true;
             btnStatus = 3;
         }
-        Utility.CalcUserPeyment();
+        Utility.calcUserPeyment();
     }
     /**
 <summary>
@@ -300,7 +351,7 @@ public class Controller : MonoBehaviour
             }
             btnStatus = 4;
         }
-        Utility.CalcUserPeyment();
+        Utility.calcUserPeyment();
     }
     /**
     <summary>
@@ -338,13 +389,11 @@ public class Controller : MonoBehaviour
         {
             case 1:
                 //押したボタンの親オブジェクトを取得
-                Transform UserArea = newItemBtn.transform.parent;
-                Utility.OnNewItemHozon(inputArea, ContensData.contents, UserArea);
+                Transform UserArea = addItemBtn.transform.parent;
+                Utility.onNewItemHozon(inputArea, ContensData.contents, UserArea);
                 break;
             case 2:
-                //押したボタンの親オブジェクトを取得
-                Transform userAreaPrent = newUserBtn.transform.parent;
-                Utility.OnNewUserHozon(inputArea, ContensData.contents, userAreaPrent);
+                Utility.onNewUserHozon(inputArea, ContensData.contents);
                 break;
             case 5:
                 Utility.editUserNameAreaHozon(inputArea, ContensData.contents, userNameBtn.transform);
@@ -352,9 +401,15 @@ public class Controller : MonoBehaviour
             case 6:
                 Utility.editShousaiAreaHozon(inputArea, ContensData.contents, shousaiBtn.transform);
                 break;
+            case 7:
+                Utility.onNewContentHozon(inputArea, addContentBtn.transform.parent);
+                break;
+            case 8:
+                Utility.editContentHozon(inputArea, contentBtn.transform);
+                break;
 
         }
-        Utility.CalcUserPeyment();
+        Utility.calcUserPeyment();
         InputFiled.SetActive(false);
     }
     /**
@@ -366,5 +421,68 @@ public class Controller : MonoBehaviour
     public void OnBatuButton()
     {
         InputFiled.SetActive(false);
+    }
+    /**
+    <summary>
+        コンテンツを変更するときの処理
+        return : なし
+    </summary>
+    */
+    public void OnNotSelectContent()
+    {
+        
+        //コンテンツを取得(選択されているコンテンツは対象外)
+        contentBtn = eventSystem.currentSelectedGameObject;
+        int contentId = contentBtn.transform.GetComponent<Id>().id;
+        if(contentId != ContentsStatus)
+        {
+            Utility.loadContent(contentId, contentBtn, ContentsStatus);
+            Utility.calcUserPeyment();
+        }
+    }
+    /**
+    <summary>
+        矢印ボタンが押されたときの処理
+        return : なし
+    </summary>
+    */
+    public void OnArrowBtn()
+    {
+        //矢印ボタンを取得
+        arrowBtn = eventSystem.currentSelectedGameObject;
+        Transform arrow = arrowBtn.transform.GetChild(1).GetComponent<Transform>();
+        Transform userArea = arrowBtn.transform.parent.parent.parent;
+
+        //矢印フラグの判定
+        if (arrow.GetComponent<ArrowFlg>().arrowFlg)
+        {
+            arrow.GetComponent<ArrowFlg>().arrowFlg = false;
+            arrow.rotation = Quaternion.Euler(0.0f, 0.0f, -90f);
+            int childCount = userArea.childCount;
+            //ユーザーエリア以外のオブジェクトを非アクティブにする
+            for (int i = 0; i < childCount; i++)
+            {
+                if (userArea.GetChild(i).tag == "userNameArea")
+                    continue;
+                userArea.GetChild(i).gameObject.SetActive(false);
+            }
+        }
+        else
+        {
+            arrow.GetComponent<ArrowFlg>().arrowFlg = true;
+            arrow.rotation = Quaternion.Euler(0.0f, 0.0f, -180f);
+            int childCount = userArea.childCount;
+            //ユーザーエリア以外のオブジェクトを非アクティブにする
+            for (int i = 0; i < childCount; i++)
+            {
+                if (userArea.GetChild(i).tag == "userNameArea")
+                    continue;
+                userArea.GetChild(i).gameObject.SetActive(true);
+            }
+        }
+        //リフレッシュ
+        userArea.gameObject.SetActive(false);
+        Canvas.ForceUpdateCanvases();
+        userArea.gameObject.SetActive(true);
     }
 }
