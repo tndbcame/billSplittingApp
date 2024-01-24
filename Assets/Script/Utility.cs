@@ -204,40 +204,73 @@ public class Utility : MonoBehaviour
         return : なし
     </summary>
     */
-    public static void onChangeEditModeListener(GameObject obj, ScrollRect scrollRect, bool orderable)
+    public static void onChangeEditMode(GameObject obj, ScrollRect scrollRect, string tag)
     {
         Transform parentArea;
         GameObject ContentbottomLeft = GameObject.FindGameObjectWithTag("ContentbottomLeft");
 
         //長押ししたボタンに応じて編集モード用にオブジェクトを編集する
-        if (obj.tag == "userNameArea")
+        if (tag == "userNameArea")
         {
+            Controller.editStatus = 1;
             parentArea = GameObject.FindGameObjectWithTag("UserNameAreaEdt").transform;
             GameObject[] allUserNameArea = GameObject.FindGameObjectsWithTag("userNameArea");
             scrollRect.content = parentArea.GetComponent<RectTransform>();
 
             //対象を移動してコンポーネントをアタッチしオブジェクトを移動させる
-            for (int i = 0; i < allUserNameArea.Length; i++)
+            foreach (GameObject userNameArea in allUserNameArea)
             {
-                GameObject userNameArea = allUserNameArea[i];
-                userNameArea.AddComponent<ListElement>();
-                userNameArea.transform.SetParent(parentArea);
-                userNameArea.transform.SetSiblingIndex(userNameArea.GetComponent<ElementIndex>().Index);
+                GameObject userNameAreaClone = getUserNameArea(parentArea);
+                userNameAreaClone.transform.GetComponent<Id>().id =
+                userNameArea.transform.GetComponent<Id>().id;
+                userNameAreaClone.transform.GetChild(0).GetComponent<Transform>().
+                    GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text =
+                userNameArea.transform.GetChild(0).GetComponent<Transform>().
+                    GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
+                userNameAreaClone.transform.GetChild(0).GetComponent<Transform>().
+                    GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text =
+                userNameArea.transform.GetChild(0).GetComponent<Transform>().
+                    GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
+                userNameAreaClone.transform.GetChild(0).GetComponent<Transform>().
+                    GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text =
+                userNameArea.transform.GetChild(0).GetComponent<Transform>().
+                    GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text;
+                userNameAreaClone.tag = "userNameAreaClone";
+            }
+            List<int> idList = new List<int>();
+            //位置情報を取得して並び替え
+            for (int i = 0; i < parentArea.childCount; i++)
+            {
+                idList.Add(parentArea.GetChild(i).GetComponent<Id>().id);
+            }
+            idList.Sort();
+
+            while (idList.Count > 0)
+            {
+                int id = idList[0];
+                idList.RemoveAt(0);
+                for (int i = 0; i < parentArea.childCount; i++)
+                {
+                    if (id == parentArea.GetChild(i).GetComponent<Id>().id)
+                    {
+                        parentArea.GetChild(i).SetSiblingIndex(id);
+                        break;
+                    }
+                }
+            }
+            for (int i = 0; i < parentArea.childCount; i++)
+            {
+                parentArea.GetChild(i).GetComponent<ElementIndex>().Index = i + 1;
             }
             //マーカーを再設定
             ContentbottomLeft.transform.SetParent(parentArea);
             ContentbottomLeft.transform.localPosition = new Vector3(0, 0, 0);
+            ContentbottomLeft.transform.SetAsFirstSibling();
             ContentbottomLeft.SetActive(false);
-
-            //位置情報を取得して並び替え
-            for (int i = 0; i < allUserNameArea.Length; i++)
-            {
-                Transform child = parentArea.transform.GetChild(i).GetComponent<Transform>();
-                child.SetSiblingIndex(child.gameObject.GetComponent<ElementIndex>().Index);
-            }
         }
         else if (obj.tag == "shousaiArea")
         {
+            Controller.editStatus = 2;
             //親オブジェクトを変更して編集する
             Transform grandParentArea = GameObject.FindGameObjectWithTag("Viewport").transform;
             parentArea = obj.transform.parent;
@@ -252,15 +285,9 @@ public class Utility : MonoBehaviour
             {
                 Transform child =
                     parentArea.transform.GetChild(i).GetComponent<Transform>();
-                if (child.tag == "userNameArea")
-                {
-                    ElementIndex UserNameAreaIndex =
-                        child.GetComponent<ElementIndex>();
-                    Destroy(UserNameAreaIndex);
-                }
-                child.gameObject.AddComponent<ListElement>();
-                child.gameObject.AddComponent<ElementIndex>();
-                child.gameObject.GetComponent<ElementIndex>().Index = i;
+
+                //indexを付与
+                child.gameObject.GetComponent<ElementIndex>().Index = i + 1;
 
                 if (i == (childCount - 1))
                 {
@@ -270,13 +297,82 @@ public class Utility : MonoBehaviour
                     ContentbottomLeft.transform.SetParent(parentArea, false);
                     ContentbottomLeft.transform.SetAsFirstSibling();
                     ContentbottomLeft.SetActive(false);
-
                 }
             }
         }
-        //Content配下を非アクティブへ変更
-        GameObject Content = GameObject.FindGameObjectWithTag("Content");
-        Content.SetActive(false);
+        //Content配下を削除
+        GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
+        foreach (GameObject userArea in allUserArea)
+            Destroy(userArea);
+    }
+
+    /**
+    <summary>
+        編集モードから通常モードへ戻るときの処理
+        return : なし
+    </summary>
+    */
+    public static void onChangeNormalModeListener(List<Transform> objList, Contents contents, ScrollRect scrollRect)
+    {
+        //ユーザーエリアの場合
+        if (Controller.editStatus == 1)
+        {
+            GameObject[] allUserNameArea = GameObject.FindGameObjectsWithTag("userNameAreaClone");
+            if (objList == null)
+            {
+                Debug.Log(objList == null);
+                objList = new List<Transform>();
+                for (int i = 0; i < allUserNameArea.Length; i++)
+                {
+                    objList.Add(allUserNameArea[i].GetComponent<Transform>());
+                }
+            }
+            //セーブデータのユーザーIndexとIdが一致するUserNameAreaを子オブジェクトとして格納
+            for (int i = 0; i < contents.user.Count; i++)
+            {
+                for (int j = 0; j < objList.Count; j++)
+                {
+                    if (contents.user[i].index == objList[j].GetComponent<Id>().id)
+                    {
+                        contents.user[i].index = objList[j].GetComponent<ElementIndex>().Index;
+                        break;
+                    }
+                }
+            }
+            contents.user.Sort((a, b) => a.index - b.index);
+
+            //ユーザーネームエリアを削除
+            foreach (GameObject userNameArea in allUserNameArea)
+                Destroy(userNameArea);
+
+            //マーカーをもとに戻す
+            GameObject UserNameAreaEdt = GameObject.FindGameObjectWithTag("UserNameAreaEdt");
+            Transform ContentbottomLeft = UserNameAreaEdt.transform.GetChild(0).GetComponent<Transform>();
+            ContentbottomLeft.SetParent(UserNameAreaEdt.transform.parent);
+            ContentbottomLeft.gameObject.SetActive(true);
+
+            //UIコンテンツを取得
+            GameObject[] allContentArea = GameObject.FindGameObjectsWithTag("ContentArea");
+            GameObject UIContent = new GameObject();
+            foreach (GameObject contentArea in allContentArea)
+            {
+                if (contentArea.transform.GetComponent<Id>().id == Controller.contentsStatus)
+                    UIContent = contentArea;
+            }
+            generateContent(UIContent, contents);
+            SaveManager.save(Controller.contentsStatus, contents);
+
+            //スクロールレクトをもとに戻す
+            Transform parentArea = GameObject.FindGameObjectWithTag("Content").transform;
+            scrollRect.content = parentArea.GetComponent<RectTransform>();
+        }
+        //詳細エリアの場合
+        else if (Controller.editStatus == 2)
+        {
+
+        }
+
+        SaveManager.save(Controller.contentsStatus, contents);
     }
     /**
     <summary>
@@ -314,7 +410,7 @@ public class Utility : MonoBehaviour
                 generateContent(contentArea, ContensData.contents);
 
                 //コンテンツステータスを更新
-                Controller.ContentsStatus = ContentAreaIndex.id;
+                Controller.contentsStatus = ContentAreaIndex.id;
             }
 
             //セーブデータが存在しない場合はセーブする
@@ -336,7 +432,7 @@ public class Utility : MonoBehaviour
 
         //ユーザーエリアを削除
         GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
-        foreach(GameObject userArea in allUserArea)
+        foreach (GameObject userArea in allUserArea)
         {
             //ここをfalseにしないとFindGameObjectsWithTagでヒットしてしまうため
             userArea.SetActive(false);
@@ -344,9 +440,9 @@ public class Utility : MonoBehaviour
         }
         //他のコンテンツエリアの表示を変更
         GameObject[] contentsArea = GameObject.FindGameObjectsWithTag("ContentArea");
-        foreach(GameObject contentArea_ in contentsArea)
+        foreach (GameObject contentArea_ in contentsArea)
         {
-            if(contentArea_.transform.GetComponent<Id>().id == oldContentStatus)
+            if (contentArea_.transform.GetComponent<Id>().id == oldContentStatus)
             {
                 //フォーマットを元に戻す
                 processContentName2(contentArea_);
@@ -357,7 +453,8 @@ public class Utility : MonoBehaviour
         //UIを生成
         generateContent(contentArea, ContensData.contents);
         //コンテンツステータスを更新
-        Controller.ContentsStatus = id;
+        Controller.contentsStatus = id;
+        Canvas.ForceUpdateCanvases();
     }
     /**
     <summary>
@@ -376,7 +473,7 @@ public class Utility : MonoBehaviour
             GameObject userArea;
 
             //セーブデータに詳細エリアがない場合で分岐
-            if (ContensData.contents.user[i].shousai.Count == 0)
+            if (contents.user[i].shousai.Count == 0)
             {
                 userArea = getUserArea(true);
             }
@@ -385,7 +482,8 @@ public class Utility : MonoBehaviour
                 userArea = getUserArea(false);
             }
             //Idを設定
-            userArea.GetComponent<Id>().id = i;
+            userArea.GetComponent<Id>().id = contents.user[i].index;
+
             //ユーザー名を取得
             userArea.transform.GetChild(0).GetComponent<Transform>().
             GetChild(0).GetComponent<Transform>().
@@ -393,7 +491,9 @@ public class Utility : MonoBehaviour
                 contents.user[i].userName;
             //ユーザー名にIdを設定
             userArea.transform.GetChild(0).GetComponent<Transform>().
-                gameObject.GetComponent<Id>().id = i;
+                gameObject.GetComponent<Id>().id = contents.user[i].index;
+            userArea.transform.GetChild(0).GetComponent<Transform>().
+                gameObject.GetComponent<ElementIndex>().Index = contents.user[i].index;
 
             //詳細エリアの処理
             for (int j = 0; j < contents.user[i].shousai.Count; j++)
@@ -470,7 +570,7 @@ public class Utility : MonoBehaviour
         contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().alignment = TextAlignmentOptions.Bottom;
         contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().fontSize = 30;
         contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().color
-            = new Color(0.8117647f, 0.7960784f, 0.772549f, 1.0f);
+            = new Color(0.5849056f, 0.5849056f, 0.5849056f, 1.0f);
     }
     /**
     <summary>
@@ -510,9 +610,9 @@ public class Utility : MonoBehaviour
         {
             UserAreaClone.transform.GetChild(i).GetComponent<Transform>().gameObject.SetActive(true);
         }
-        GameObject Content = GameObject.FindGameObjectWithTag("Content");
+        GameObject UIcontent = GameObject.FindGameObjectWithTag("Content");
         GameObject userArea =
-            Instantiate(UserAreaClone, Vector3.zero, Quaternion.identity, Content.transform);
+            Instantiate(UserAreaClone, Vector3.zero, Quaternion.identity, UIcontent.transform);
         userArea.tag = "UserArea";
         //クローン元の子供を取得して非アクティブにする
         for (int i = 0; i < UserAreaClone.transform.childCount; i++)
@@ -520,6 +620,30 @@ public class Utility : MonoBehaviour
             UserAreaClone.transform.GetChild(i).GetComponent<Transform>().gameObject.SetActive(false);
         }
         return userArea;
+    }
+    /**
+    <summary>
+        詳細エリアを取得する(引数で親にするObjectのTransformを渡す)
+        return : GameObject 詳細オブジェクト
+    </summary>
+    */
+    public static GameObject getUserNameArea(Transform parentUserArea)
+    {
+        GameObject UserAreaClone = GameObject.FindGameObjectWithTag("UserAreaClone");
+        //子供を取得してアクティブにする
+        for (int i = 0; i < UserAreaClone.transform.childCount; i++)
+        {
+            UserAreaClone.transform.GetChild(i).GetComponent<Transform>().gameObject.SetActive(true);
+        }
+        GameObject _userNameArea = UserAreaClone.transform.GetChild(0).GetComponent<Transform>().gameObject;
+        GameObject userNameArea = Instantiate(_userNameArea, Vector3.zero, Quaternion.identity, parentUserArea);
+        //クローン々の子供を取得して非アクティブにする
+        for (int i = 0; i < UserAreaClone.transform.childCount; i++)
+        {
+            UserAreaClone.transform.GetChild(i).GetComponent<Transform>().gameObject.SetActive(false);
+        }
+
+        return userNameArea;
     }
     /**
     <summary>
@@ -544,6 +668,40 @@ public class Utility : MonoBehaviour
         }
 
         return shousai;
+    }
+    /**
+    <summary>
+        ユーザーネームリストを取得する
+        return : List<Transform>　ユーザーネームリスト
+    </summary>
+    */
+    public static List<Transform> getNewUserNames()
+    {
+        GameObject UserNameAreaEdt = GameObject.FindGameObjectWithTag("UserNameAreaEdt");
+        List<Transform> userNames = new List<Transform>();
+        Debug.Log(userNames);
+        for (int i = 1; i < UserNameAreaEdt.transform.childCount; i++)
+        {
+            userNames.Add(UserNameAreaEdt.transform.GetChild(i).GetComponent<Transform>());
+        }
+        return userNames;
+    }
+    /**
+    <summary>
+        詳細リストを取得する
+        return : List<Transform>　ユーザーネームリスト
+    </summary>
+    */
+    public static List<Transform> getNewShousai()
+    {
+        GameObject UserAreaActive = GameObject.FindGameObjectWithTag("UserAreaActive");
+        List<Transform> shousaiList = new List<Transform>();
+        Debug.Log(shousaiList);
+        for (int i = 3; i < UserAreaActive.transform.childCount; i++)
+        {
+            shousaiList.Add(UserAreaActive.transform.GetChild(i).GetComponent<Transform>());
+        }
+        return shousaiList;
     }
     /**
     <summary>
@@ -639,7 +797,7 @@ public class Utility : MonoBehaviour
 
                 //セーブする
                 contents.user[i].shousai.Add(shousai);
-                SaveManager.save(Controller.ContentsStatus, contents);
+                SaveManager.save(Controller.contentsStatus, contents);
                 break;
             }
         }
@@ -663,16 +821,14 @@ public class Utility : MonoBehaviour
         //ユーザー取得
         GameObject userArea = getUserArea(false);
 
-        //Idを取得
-        int id = contents.user.Count;
-
         //ユーザーインスタンス取得
         User user = new User();
 
-        //ユーザーエリア、ユーザーネームエリア、詳細エリアIdに反映させる
+        //ユーザーエリア、ユーザーネームエリア、詳細エリアIdに反映させるTODOここがうまく行かない件をなんとかする
+        int id = generateUserAreaIndex();
         userArea.GetComponent<Id>().id = id;
         userArea.transform.GetChild(0).GetComponent<Id>().id = id;
-        userArea.transform.GetChild(2).GetComponent<Id>().id = id;
+        userArea.transform.GetChild(2).GetComponent<Id>().id = contents.user.Count;
         user.index = id;
 
         //ユーザー名をUIに反映
@@ -713,7 +869,7 @@ public class Utility : MonoBehaviour
         shousaiTxt.GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text = "¥" + shousai.money.ToString("N0");
 
         //データをセーブする
-        SaveManager.save(Controller.ContentsStatus, contents);
+        SaveManager.save(Controller.contentsStatus, contents);
     }
     /**
     <summary>
@@ -807,6 +963,24 @@ public class Utility : MonoBehaviour
     }
     /**
     <summary>
+        ユーザーエリアの重複しない最大値 + 1のindexを探して返却
+        return : int index
+    </summary>
+    */
+    public static int generateUserAreaIndex()
+    {
+        int index = 0;
+        List<int> nums = new List<int>();
+        GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
+        foreach (GameObject UserArea in allUserArea)
+        {
+            nums.Add(UserArea.transform.GetComponent<Id>().id);
+        }
+        index = nums.Max() + 1;
+        return index;
+    }
+    /**
+    <summary>
         詳細エリアの削除をする
         return : なし
     </summary>
@@ -830,7 +1004,7 @@ public class Utility : MonoBehaviour
                 {
                     if (contents.user[i].index == UserAreaId)
                     {
-                        for (int j = 0; j < contents.user[UserAreaId].shousai.Count; j++)
+                        for (int j = 0; j < contents.user[i].shousai.Count; j++)
                         {
                             if (contents.user[i].shousai[j].index == shousaiAreaId)
                             {
@@ -845,7 +1019,7 @@ public class Utility : MonoBehaviour
                 Canvas.ForceUpdateCanvases();
                 shousaiArea.SetActive(true);
                 //セーブする
-                SaveManager.save(Controller.ContentsStatus, contents);
+                SaveManager.save(Controller.contentsStatus, contents);
             }
         }
     }
@@ -883,7 +1057,7 @@ public class Utility : MonoBehaviour
                 Canvas.ForceUpdateCanvases();
                 userArea.SetActive(true);
                 //セーブする
-                SaveManager.save(Controller.ContentsStatus, contents);
+                SaveManager.save(Controller.contentsStatus, contents);
             }
         }
     }
@@ -918,7 +1092,7 @@ public class Utility : MonoBehaviour
         }
 
         //セーブする
-        SaveManager.save(Controller.ContentsStatus, contents);
+        SaveManager.save(Controller.contentsStatus, contents);
     }
     /**
     <summary>
@@ -975,7 +1149,7 @@ public class Utility : MonoBehaviour
         }
 
         //セーブする
-        SaveManager.save(Controller.ContentsStatus, contents);
+        SaveManager.save(Controller.contentsStatus, contents);
     }
     public static void editContentHozon(Transform inputArea, Transform contentArea)
     {

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Kyub.EmojiSearch.UI;
 using TMPro;
 using UnityEngine;
@@ -9,7 +10,8 @@ public class Controller : MonoBehaviour
 {
     [SerializeField] private EventSystem eventSystem;
     [SerializeField] private ScrollRect scrollRect;
-    [SerializeField] private GameObject InputFiled;
+    [SerializeField] private GameObject inputFiled;
+    [SerializeField] private GameObject returnObject;
     //キャッシュ用のオブジェクト
     private Transform inputArea;
     //新しい項目を追加をするボタン
@@ -36,10 +38,22 @@ public class Controller : MonoBehaviour
     private GameObject button_ob;
     //長押しの判定時間
     private float longTapTime = 0.4f;
-    //編集モート用フラグ
-    public static bool EditFlg = true;
+    //ユーザーエリアの編集モード時のオブジェクトリスト
+    private List<Transform> userNamesList;
+    //詳細エリアの編集モード時のオブジェクトリスト
+    private List<Transform> shousaiList;
+    //編集モード用フラグ
+    public static bool editFlg = true;
+    //編集モードの状態を管理(通常:0, ユーザーエリア:1, 詳細エリア:2)
+    public static int editStatus = 0;
     //コンテンツの状態を管理
-    public static int ContentsStatus;
+    public static int contentsStatus;
+    //並べ替えるオブジェクトのインデックス
+    private int oldElementIndex = 0;
+    //並べ替えられるオブジェクトのインデックス
+    private int updateElementIndex = 0;
+    //ボタンのタグを格納する
+    private string buttonObTag;
 
     void Start()
     {
@@ -48,24 +62,55 @@ public class Controller : MonoBehaviour
         //支出を計算する
         Utility.calcUserPeyment();
         //InputFiledからテキストを取得しやすいようにキャッシュ
-        inputArea = InputFiled.transform.GetChild(0).GetComponent<Transform>();
+        inputArea = inputFiled.transform.GetChild(0).GetComponent<Transform>();
     }
 
     void Update()
     {
-        if (LongTap.isDown && EditFlg)
+        if (LongTap.isDown && editFlg)
         {
             LongTap.time += Time.deltaTime;
             if (LongTap.time >= longTapTime)
             {
 
                 Debug.Log("Long Tap");
-                EditFlg = false;
+                editFlg = false;
                 LongTap.isDown = false;
                 button_ob = eventSystem.currentSelectedGameObject;
-                Utility.onChangeEditModeListener(button_ob, scrollRect, true);
+                buttonObTag = button_ob.tag;
+                returnObject.SetActive(true);
+                Utility.onChangeEditMode(button_ob, scrollRect, buttonObTag);
+                if (buttonObTag == "userNameArea")
+                {
+                    userNamesList = Utility.getNewUserNames();
+                }
+                else if(buttonObTag == "shousaiArea")
+                {
+                    shousaiList = Utility.getNewShousai();
+                }
             }
         }
+    }
+    public void OnBeginOrderListener(int index)
+    {
+        oldElementIndex = index;
+        Debug.Log($"開始: {index}");
+    }
+
+    public void OnUpdateOrderListener(int index)
+    {
+        if (buttonObTag == "userNameArea")
+        {
+            if (index == 0)
+                return;
+        }
+        else if(buttonObTag == "shousaiArea")
+        {
+            if (index == 0 || index == 1 || index == 2)
+                return;
+        }
+        updateElementIndex = index;
+        Debug.Log($"更新: {oldElementIndex} ⇒ {updateElementIndex}");
     }
     /**
     <summary>
@@ -75,7 +120,8 @@ public class Controller : MonoBehaviour
     */
     public void OnEndOrderLisner()
     {
-        if(button_ob.tag == "shousaiArea")
+        Debug.Log($"完了: {oldElementIndex} ⇒ {updateElementIndex}");
+        if (buttonObTag == "shousaiArea")
         {
             Transform UserAreaActive = GameObject.FindGameObjectWithTag("UserAreaActive").transform;
             foreach (Transform child in UserAreaActive)
@@ -93,16 +139,28 @@ public class Controller : MonoBehaviour
                     child.SetSiblingIndex(0);
                 }
             }
+            if (updateElementIndex == 0 || updateElementIndex == 1 || updateElementIndex == 2 || updateElementIndex == oldElementIndex)
+                return;
+            for (int i = 0; i < shousaiList.Count; i++)
+            {
+                shousaiList[i].GetComponent<ElementIndex>().Index = shousaiList[i].transform.GetSiblingIndex();
+            }
         }
-        else if(button_ob.tag == "userNameArea")
+        else if(buttonObTag == "userNameArea")
         {
             Transform UserNameAreaEdt = GameObject.FindGameObjectWithTag("UserNameAreaEdt").transform;
             foreach (Transform child in UserNameAreaEdt)
             {
                 if (child.tag == "ContentbottomLeft")
                 {
-                    child.SetAsLastSibling();
+                    child.SetAsFirstSibling();
                 }
+            }
+            if (updateElementIndex == 0 || updateElementIndex == oldElementIndex)
+                return;
+            for (int i = 0; i < userNamesList.Count; i++)
+            {
+                userNamesList[i].GetComponent<ElementIndex>().Index = userNamesList[i].transform.GetSiblingIndex();
             }
         }
     }
@@ -114,10 +172,10 @@ public class Controller : MonoBehaviour
     */
     public void OnAddOrUpdateItemArea(int status)
     {
-        if (!EditFlg)
+        if (!editFlg)
             return;
         btnStatus = status;
-        InputFiled.SetActive(true);
+        inputFiled.SetActive(true);
 
         //プレースホルダーに本日の日付を入力する
         inputArea.GetChild(2).GetComponent<Transform>().
@@ -180,15 +238,28 @@ public class Controller : MonoBehaviour
     }
     /**
     <summary>
+        戻るボタンが押されたときの処理
+        return : なし
+    </summary>
+    */
+    public void OnReturnButton()
+    {
+        //エディットフラグをもとに
+        editFlg = true;
+        Utility.onChangeNormalModeListener(userNamesList, ContensData.contents, scrollRect);
+        Utility.calcUserPeyment();
+    }
+    /**
+    <summary>
         ユーザー追加/編集ボタンが押されたときの処理
         return : なし
     </summary>
     */
     public void OnAddOrUpdateUserArea(int status)
     {
-        if (!EditFlg)
+        if (!editFlg)
             return;
-        InputFiled.SetActive(true);
+        inputFiled.SetActive(true);
         btnStatus = status;
 
         //押したボタンを取得
@@ -230,7 +301,7 @@ public class Controller : MonoBehaviour
     */
     public void OnAddOrUpdateContent(int status)
     {
-        if (!EditFlg)
+        if (!editFlg)
             return;
 
         btnStatus = status;
@@ -243,14 +314,14 @@ public class Controller : MonoBehaviour
             contentBtn = eventSystem.currentSelectedGameObject;
 
             //選択されていない場合は終了
-            if (contentBtn.GetComponent<Id>().id != ContentsStatus)
+            if (contentBtn.GetComponent<Id>().id != contentsStatus)
                 return;
 
             inputArea.GetChild(10).
                 transform.GetComponent<TMP_InputField>().text
                 = Utility.removeContentNameFormat(contentBtn.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text);
         }
-        InputFiled.SetActive(true);
+        inputFiled.SetActive(true);
         //子を取得して関係ないオブジェクトをfalseにする
         int childCount = inputArea.transform.childCount;
         for (int i = 0; i < childCount; i++)
@@ -362,7 +433,7 @@ public class Controller : MonoBehaviour
     public void OnDeleteArea()
     {
         //TODOデータが存在しないときにここで削除するとエラーになる問題を解決する
-        ContensData.contents = SaveManager.saveDatas[ContentsStatus];
+        ContensData.contents = SaveManager.saveDatas[contentsStatus];
         if(btnStatus == 3)
         {
             Utility.deleteShousaiArea(ContensData.contents);
@@ -383,7 +454,7 @@ public class Controller : MonoBehaviour
     {
         //セーブデータを呼び出して該当のコンテンツを取得する
         SaveManager.getSaveData();
-        ContensData.contents = SaveManager.saveDatas[ContentsStatus];
+        ContensData.contents = SaveManager.saveDatas[contentsStatus];
 
         switch (btnStatus)
         {
@@ -410,7 +481,7 @@ public class Controller : MonoBehaviour
 
         }
         Utility.calcUserPeyment();
-        InputFiled.SetActive(false);
+        inputFiled.SetActive(false);
     }
     /**
     <summary>
@@ -420,7 +491,7 @@ public class Controller : MonoBehaviour
     */
     public void OnBatuButton()
     {
-        InputFiled.SetActive(false);
+        inputFiled.SetActive(false);
     }
     /**
     <summary>
@@ -434,9 +505,9 @@ public class Controller : MonoBehaviour
         //コンテンツを取得(選択されているコンテンツは対象外)
         contentBtn = eventSystem.currentSelectedGameObject;
         int contentId = contentBtn.transform.GetComponent<Id>().id;
-        if(contentId != ContentsStatus)
+        if(contentId != contentsStatus)
         {
-            Utility.loadContent(contentId, contentBtn, ContentsStatus);
+            Utility.loadContent(contentId, contentBtn, contentsStatus);
             Utility.calcUserPeyment();
         }
     }
@@ -452,13 +523,13 @@ public class Controller : MonoBehaviour
         arrowBtn = eventSystem.currentSelectedGameObject;
         Transform arrow = arrowBtn.transform.GetChild(1).GetComponent<Transform>();
         Transform userArea = arrowBtn.transform.parent.parent.parent;
+        int childCount = userArea.childCount;
 
         //矢印フラグの判定
         if (arrow.GetComponent<ArrowFlg>().arrowFlg)
         {
             arrow.GetComponent<ArrowFlg>().arrowFlg = false;
             arrow.rotation = Quaternion.Euler(0.0f, 0.0f, -90f);
-            int childCount = userArea.childCount;
             //ユーザーエリア以外のオブジェクトを非アクティブにする
             for (int i = 0; i < childCount; i++)
             {
@@ -471,7 +542,6 @@ public class Controller : MonoBehaviour
         {
             arrow.GetComponent<ArrowFlg>().arrowFlg = true;
             arrow.rotation = Quaternion.Euler(0.0f, 0.0f, -180f);
-            int childCount = userArea.childCount;
             //ユーザーエリア以外のオブジェクトを非アクティブにする
             for (int i = 0; i < childCount; i++)
             {

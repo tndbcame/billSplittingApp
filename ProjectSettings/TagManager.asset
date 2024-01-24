@@ -30,6 +30,7 @@ TagManager:
   - DustBox
   - Addition
   - Covers
+  - userNameAreaClone
   layers:
   - Default
   - TransparentFX

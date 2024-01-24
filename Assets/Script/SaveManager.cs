@@ -37,7 +37,6 @@ public static class SaveManager
         contentsSd.name = "セーブデータ" + index.ToString();
         string json = JsonUtility.ToJson(contentsSd);
         //TODObuildするときはここを変更する
-        // string path = AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\');
         // IOS(クラウドに保存されないような設定が必要)
         // string path = Application.persistentDataPath;
         // unity
