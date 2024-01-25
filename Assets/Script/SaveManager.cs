@@ -48,6 +48,17 @@ public static class SaveManager
         writer.Flush();
         writer.Close();
     }
+    public static void delete(int index)
+    {
+        if (1 >= saveDatas.Count)
+            return;
+
+        string path = Directory.GetCurrentDirectory();
+        path += ("/" + SAVE_DIRECTORY + "/" + SAVE_FILE_NAME + index.ToString() + SAVE_FILE_TAIL);
+        File.Delete(path);
+        saveDatas = new Dictionary<int, Contents>();
+        getSaveData();
+    }
     /**
     <summary>
         すべてのセーブデータを取得する

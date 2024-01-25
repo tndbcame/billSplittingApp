@@ -12,6 +12,114 @@ public class Utility : MonoBehaviour
 {
     /**
     <summary>
+        アプリ開始時に呼び出されデータをロードする
+        return : なし
+    </summary>
+    */
+    public static void loadContentAtFirstTime()
+    {
+        SaveManager.getSaveData();
+
+        if (0 == SaveManager.saveDatas.Count)
+        {
+            //クローン用コンテンツ取得
+            GameObject contentArea = getContentArea();
+            //Idを取得
+            Id ContentAreaIndex = contentArea.GetComponent<Id>();
+            //データを取得
+            ContensData.contents = SaveManager.load(1);
+            //コンテンツのIDを格納
+            ContentAreaIndex.id = 1;
+            //順番を整える
+            contentArea.transform.SetSiblingIndex(ContentAreaIndex.id - 1);
+            //コンテンツ名を格納
+            contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = ContensData.contents.contentsName;
+            //コンテンツを生成
+            generateContent(contentArea, ContensData.contents);
+            //コンテンツステータスを更新
+            Controller.contentsStatus = ContentAreaIndex.id;
+            //セーブする
+            SaveManager.save(ContentAreaIndex.id, ContensData.contents);
+        }
+        else
+        {
+            loadContent();
+        }
+    }
+    /**
+    <summary>
+        データが存在する場合データをロードする
+        return : なし
+    </summary>
+    */
+    public static void loadContent()
+    {
+        List<int> keyList = getSaveDataKeyList();
+        for (int i = 0; i < keyList.Count; i++)
+        {
+            //クローン用コンテンツ取得
+            GameObject contentArea = getContentArea();
+            //Idを取得
+            Id ContentAreaIndex = contentArea.GetComponent<Id>();
+            //データを取得
+            ContensData.contents = SaveManager.saveDatas[keyList[i]];
+            //コンテンツのIDを格納
+            ContentAreaIndex.id = ContensData.contents.fileNo;
+            //順番を整える
+            contentArea.transform.SetSiblingIndex(ContentAreaIndex.id - 1);
+            Transform addContentArea = GameObject.FindGameObjectWithTag("AddContentArea").transform;
+            addContentArea.SetAsLastSibling();
+            //コンテンツ名を格納
+            contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = ContensData.contents.contentsName;
+            //一番最初のセーブデータを生成
+            if (i == 0)
+            {
+                generateContent(contentArea, ContensData.contents);
+
+                //コンテンツステータスを更新
+                Controller.contentsStatus = ContentAreaIndex.id;
+            }
+            Canvas.ForceUpdateCanvases();
+        }
+    }
+    /**
+    <summary>
+        コンテンツデータをロードする
+        return : なし
+    </summary>
+    */
+    public static void loadNoSelectContent(int id, GameObject contentArea, int oldContentStatus)
+    {
+        ContensData.contents = SaveManager.load(id);
+
+        //ユーザーエリアを削除
+        GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
+        foreach (GameObject userArea in allUserArea)
+        {
+            //ここをfalseにしないとFindGameObjectsWithTagでヒットしてしまうため
+            userArea.SetActive(false);
+            Destroy(userArea);
+        }
+        //他のコンテンツエリアの表示を変更
+        GameObject[] contentsArea = GameObject.FindGameObjectsWithTag("ContentArea");
+        foreach (GameObject contentArea_ in contentsArea)
+        {
+            if (contentArea_.transform.GetComponent<Id>().id == oldContentStatus)
+            {
+                //フォーマットを元に戻す
+                processContentName2(contentArea_);
+                break;
+            }
+        }
+        contentArea.SetActive(false);
+        //UIを生成
+        generateContent(contentArea, ContensData.contents);
+        //コンテンツステータスを更新
+        Controller.contentsStatus = id;
+        Canvas.ForceUpdateCanvases();
+    }
+    /**
+    <summary>
         ユーザーごとの支出を計算する
         return : なし
     </summary>
@@ -318,16 +426,8 @@ public class Utility : MonoBehaviour
         if (Controller.editStatus == 1)
         {
             GameObject[] allUserNameArea = GameObject.FindGameObjectsWithTag("userNameAreaClone");
-            if (objList == null)
-            {
-                Debug.Log(objList == null);
-                objList = new List<Transform>();
-                for (int i = 0; i < allUserNameArea.Length; i++)
-                {
-                    objList.Add(allUserNameArea[i].GetComponent<Transform>());
-                }
-            }
-            //セーブデータのユーザーIndexとIdが一致するUserNameAreaを子オブジェクトとして格納
+
+            //セーブデータのユーザーIndexとIdが一致するセーブデータのインデックスを更新
             for (int i = 0; i < contents.user.Count; i++)
             {
                 for (int j = 0; j < objList.Count; j++)
@@ -350,111 +450,57 @@ public class Utility : MonoBehaviour
             Transform ContentbottomLeft = UserNameAreaEdt.transform.GetChild(0).GetComponent<Transform>();
             ContentbottomLeft.SetParent(UserNameAreaEdt.transform.parent);
             ContentbottomLeft.gameObject.SetActive(true);
-
-            //UIコンテンツを取得
-            GameObject[] allContentArea = GameObject.FindGameObjectsWithTag("ContentArea");
-            GameObject UIContent = new GameObject();
-            foreach (GameObject contentArea in allContentArea)
-            {
-                if (contentArea.transform.GetComponent<Id>().id == Controller.contentsStatus)
-                    UIContent = contentArea;
-            }
-            generateContent(UIContent, contents);
-            SaveManager.save(Controller.contentsStatus, contents);
-
-            //スクロールレクトをもとに戻す
-            Transform parentArea = GameObject.FindGameObjectWithTag("Content").transform;
-            scrollRect.content = parentArea.GetComponent<RectTransform>();
         }
         //詳細エリアの場合
         else if (Controller.editStatus == 2)
         {
+            //セーブデータの詳細IndexとIdが一致するセーブデータのインデックスを更新
+            GameObject userAreaActive = GameObject.FindGameObjectWithTag("UserAreaActive");
+            for (int i = 0; i < contents.user.Count; i++)
+            {
+                if (contents.user[i].index == userAreaActive.GetComponent<Id>().id)
+                {
+                    for (int j = 0; j < contents.user[i].shousai.Count; j++)
+                    {
+                        for (int l = 0; l < objList.Count; l++)
+                        {
+                            if (contents.user[i].shousai[j].index == objList[l].GetComponent<Id>().id)
+                            {
+                                contents.user[i].shousai[j].index = objList[l].GetComponent<ElementIndex>().Index;
+                                break;
+                            }
+                        }
 
+                    }
+                    contents.user[i].shousai.Sort((a, b) => a.index - b.index);
+                    break;
+                }
+            }
+
+            //マーカーをもとに戻す
+            Transform ContentbottomLeft = userAreaActive.transform.GetChild(0).GetComponent<Transform>();
+            ContentbottomLeft.SetParent(userAreaActive.transform.parent);
+            ContentbottomLeft.gameObject.SetActive(true);
+
+            //UserAreaActiveを削除
+            Destroy(userAreaActive);
         }
+
+        //UIコンテンツを取得
+        GameObject[] allContentArea = GameObject.FindGameObjectsWithTag("ContentArea");
+        GameObject UIContent = new GameObject();
+        foreach (GameObject contentArea in allContentArea)
+        {
+            if (contentArea.transform.GetComponent<Id>().id == Controller.contentsStatus)
+                UIContent = contentArea;
+        }
+        generateContent(UIContent, contents);
+
+        //スクロールレクトをもとに戻す
+        Transform parentArea = GameObject.FindGameObjectWithTag("Content").transform;
+        scrollRect.content = parentArea.GetComponent<RectTransform>();
 
         SaveManager.save(Controller.contentsStatus, contents);
-    }
-    /**
-    <summary>
-        アプリ開始時に呼び出されデータをロードする
-        return : なし
-    </summary>
-    */
-    public static void loadContentAtFirstTime()
-    {
-        for (int n = 1; n == 1 || SaveManager.saveDatas.ContainsKey(n); n++)
-        {
-            ContensData.contents = SaveManager.load(n);
-            //クローン用コンテンツ取得
-            GameObject contentArea = getContentArea();
-
-            Id ContentAreaIndex = contentArea.GetComponent<Id>();
-
-            if (SaveManager.saveDatas.ContainsKey(n))
-            {
-                ContentAreaIndex.id = ContensData.contents.fileNo;
-            }
-            //データが存在しないときにこっちの分岐に入る
-            else
-            {
-                ContentAreaIndex.id = 1;
-            }
-            //順番を整える
-            contentArea.transform.SetSiblingIndex(ContentAreaIndex.id - 1);
-            //コンテンツ名を格納
-            contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = ContensData.contents.contentsName;
-
-            //セーブデータ1が初期表示
-            if (1 == ContentAreaIndex.id)
-            {
-                generateContent(contentArea, ContensData.contents);
-
-                //コンテンツステータスを更新
-                Controller.contentsStatus = ContentAreaIndex.id;
-            }
-
-            //セーブデータが存在しない場合はセーブする
-            if (!SaveManager.saveDatas.ContainsKey(n))
-            {
-                SaveManager.save(ContentAreaIndex.id, ContensData.contents);
-            }
-        }
-    }
-    /**
-    <summary>
-        コンテンツデータをロードする
-        return : なし
-    </summary>
-    */
-    public static void loadContent(int id, GameObject contentArea, int oldContentStatus)
-    {
-        ContensData.contents = SaveManager.load(id);
-
-        //ユーザーエリアを削除
-        GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
-        foreach (GameObject userArea in allUserArea)
-        {
-            //ここをfalseにしないとFindGameObjectsWithTagでヒットしてしまうため
-            userArea.SetActive(false);
-            Destroy(userArea);
-        }
-        //他のコンテンツエリアの表示を変更
-        GameObject[] contentsArea = GameObject.FindGameObjectsWithTag("ContentArea");
-        foreach (GameObject contentArea_ in contentsArea)
-        {
-            if (contentArea_.transform.GetComponent<Id>().id == oldContentStatus)
-            {
-                //フォーマットを元に戻す
-                processContentName2(contentArea_);
-                break;
-            }
-        }
-        contentArea.SetActive(false);
-        //UIを生成
-        generateContent(contentArea, ContensData.contents);
-        //コンテンツステータスを更新
-        Controller.contentsStatus = id;
-        Canvas.ForceUpdateCanvases();
     }
     /**
     <summary>
@@ -702,6 +748,21 @@ public class Utility : MonoBehaviour
             shousaiList.Add(UserAreaActive.transform.GetChild(i).GetComponent<Transform>());
         }
         return shousaiList;
+    }
+    /**
+    <summary>
+        セーブデータのキーリストを取得する
+        return : List<int>　セーブデータのキーリスト
+    </summary>
+    */
+    public static List<int> getSaveDataKeyList()
+    {
+        List<int> keyList = new List<int>();
+        foreach (int key in SaveManager.saveDatas.Keys)
+        {
+            keyList.Add(key);
+        }
+        return keyList;
     }
     /**
     <summary>
@@ -1151,6 +1212,12 @@ public class Utility : MonoBehaviour
         //セーブする
         SaveManager.save(Controller.contentsStatus, contents);
     }
+    /**
+    <summary>
+        コンテンツ編集して保存する
+        return : なし
+    </summary>
+    */
     public static void editContentHozon(Transform inputArea, Transform contentArea)
     {
         Transform contentName =
@@ -1188,6 +1255,12 @@ public class Utility : MonoBehaviour
         ContensData.contents.contentsName = contentNameTxt;
         SaveManager.save(contentAreaId, ContensData.contents);
     }
+    /**
+    <summary>
+        選択されていないコンテンツ名を編集する
+        return : なし
+    </summary>
+    */
     public static string removeContentNameFormat(string text)
     {
         var target_str = "</u>\n<size=28><color=#CFCBC5><i>-select-</i>";
@@ -1195,5 +1268,23 @@ public class Utility : MonoBehaviour
         string text_ = text.Substring(0, text.IndexOf(target_str));
         text_ = text_.Substring(target_str2.Length);
         return text_;
+    }
+    /**
+    <summary>
+        すべてのコンテンツとユーザーエリアのUIを削除する
+        return : なし
+    </summary>
+    */
+    public static void allDeleteUI()
+    {
+        GameObject[] contents = GameObject.FindGameObjectsWithTag("ContentArea");
+        GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
+        foreach(GameObject content in contents)
+            Destroy(content);
+        foreach (GameObject userArea in allUserArea)
+        {
+            userArea.SetActive(false);
+            Destroy(userArea);
+        }
     }
 }

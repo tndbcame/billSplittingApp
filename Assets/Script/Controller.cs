@@ -12,6 +12,9 @@ public class Controller : MonoBehaviour
     [SerializeField] private ScrollRect scrollRect;
     [SerializeField] private GameObject inputFiled;
     [SerializeField] private GameObject returnObject;
+    [SerializeField] private GameObject covers;
+    [SerializeField] private GameObject addition;
+    [SerializeField] private GameObject dustBox;
     //キャッシュ用のオブジェクト
     private Transform inputArea;
     //新しい項目を追加をするボタン
@@ -79,6 +82,9 @@ public class Controller : MonoBehaviour
                 button_ob = eventSystem.currentSelectedGameObject;
                 buttonObTag = button_ob.tag;
                 returnObject.SetActive(true);
+                covers.SetActive(true);
+                addition.SetActive(false);
+                dustBox.SetActive(false);
                 Utility.onChangeEditMode(button_ob, scrollRect, buttonObTag);
                 if (buttonObTag == "userNameArea")
                 {
@@ -198,7 +204,7 @@ public class Controller : MonoBehaviour
             {
                 if (ContensData.contents.user[i].index == UserAreaId)
                 {
-                    for (int j = 0; j < ContensData.contents.user[UserAreaId].shousai.Count; j++)
+                    for (int j = 0; j < ContensData.contents.user[i].shousai.Count; j++)
                     {
                         if (ContensData.contents.user[i].shousai[j].index == shousaiAreaId)
                         {
@@ -226,7 +232,7 @@ public class Controller : MonoBehaviour
         {
             Transform child =
                     inputArea.transform.GetChild(i).GetComponent<Transform>();
-            if (child.tag == "AddUser" || child.tag == "AddContent")
+            if (child.tag == "AddUser" || child.tag == "AddContent" || child.tag == "DeleteContent")
             {
                 child.gameObject.SetActive(false);
             }
@@ -246,7 +252,20 @@ public class Controller : MonoBehaviour
     {
         //エディットフラグをもとに
         editFlg = true;
-        Utility.onChangeNormalModeListener(userNamesList, ContensData.contents, scrollRect);
+        returnObject.SetActive(false);
+        covers.SetActive(false);
+        addition.SetActive(true);
+        dustBox.SetActive(true);
+        if (editStatus == 1)
+        {
+            Utility.onChangeNormalModeListener(userNamesList, ContensData.contents, scrollRect);
+        }
+        else if (editStatus == 2)
+        {
+            Utility.onChangeNormalModeListener(shousaiList, ContensData.contents, scrollRect);
+        }
+
+
         Utility.calcUserPeyment();
     }
     /**
@@ -287,7 +306,7 @@ public class Controller : MonoBehaviour
             {
                 child.gameObject.SetActive(true);
             }
-            else if (child.tag == "AddItem" || child.tag == "AddContent")
+            else if (child.tag == "AddItem" || child.tag == "AddContent" || child.tag == "DeleteContent")
             {
                 child.gameObject.SetActive(false);
             }
@@ -333,6 +352,14 @@ public class Controller : MonoBehaviour
                 child.gameObject.SetActive(true);
             }
             else if (child.tag == "AddItem" || child.tag == "AddUser")
+            {
+                child.gameObject.SetActive(false);
+            }
+            else if (child.tag == "DeleteContent" && btnStatus == 8)
+            {
+                child.gameObject.SetActive(true);
+            }
+            else if (child.tag == "DeleteContent" && btnStatus == 7)
             {
                 child.gameObject.SetActive(false);
             }
@@ -446,6 +473,23 @@ public class Controller : MonoBehaviour
     }
     /**
     <summary>
+        チェックされてる詳細エリアを削除する
+        return : なし
+    </summary>
+    */
+    public void OnDeleteContent()
+    {
+        if (1 >= SaveManager.saveDatas.Count)
+            return;
+
+        SaveManager.delete(contentsStatus);
+        Utility.allDeleteUI();
+        Utility.loadContent();
+        Utility.calcUserPeyment();
+        inputFiled.SetActive(false);
+    }
+    /**
+    <summary>
         保存ボタンが押されたときの処理
         return : なし
     </summary>
@@ -507,7 +551,7 @@ public class Controller : MonoBehaviour
         int contentId = contentBtn.transform.GetComponent<Id>().id;
         if(contentId != contentsStatus)
         {
-            Utility.loadContent(contentId, contentBtn, contentsStatus);
+            Utility.loadNoSelectContent(contentId, contentBtn, contentsStatus);
             Utility.calcUserPeyment();
         }
     }
