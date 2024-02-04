@@ -81,6 +81,8 @@ public class Utility : MonoBehaviour
             }
             Canvas.ForceUpdateCanvases();
         }
+        //生成された時点は一番最初のセーブデータが選択されている状態
+        ContensData.contents = SaveManager.saveDatas[keyList[0]];
     }
     /**
     <summary>
@@ -197,26 +199,31 @@ public class Utility : MonoBehaviour
                 totalPayment += peyment;
 
                 //支出対象を取得
-                string[] peymentTarget = new string[1] { peymentTargetTxt.text };
+                //string[] peymentTarget = new string[1] { peymentTargetTxt.text };
+                List<string> targetUserList =
+                    shousaiAreaTransform.transform.GetChild(0).GetComponent<TargetUserList>().targetUserList;
+
+                //指定なしが含まれているときは計算に含めない
+                if (targetUserList.Contains("指定なしfdhksjhfkjshdgakjdshfkjh"))
+                    continue;
 
                 //計算情報を格納する
-                //TODO一旦全員か対象の一人だけ指定できるようするが複数人にも対応できるように調整する必要あり
                 CalcItem calcItem = new CalcItem();
 
                 //ユーザー名を格納
                 calcItem.userNameProperty = userNameTxt.text;
 
                 //支払ってもらう対象ユーザーを格納
-                calcItem.targetUserProperty = peymentTarget;
+                calcItem.targetUserProperty = targetUserList;
 
                 //ユーザー数を判定
-                if (peymentTarget[0] == "")
+                if(0 < targetUserList.Count)
                 {
-                    calcItem.targetUserCountProperty = allUserArea.Length - userAreadeleteCount;
+                    calcItem.targetUserCountProperty = targetUserList.Count + 1;
                 }
                 else
                 {
-                    calcItem.targetUserCountProperty = 2;
+                    calcItem.targetUserCountProperty = allUserArea.Length - userAreadeleteCount;
                 }
 
                 //ユーザー数で割って支出を算出し格納
@@ -265,11 +272,10 @@ public class Utility : MonoBehaviour
                 //ユーザー名が同じでない場合の計算
                 if (!userNameText.text.Equals(calcItem.userNameProperty))
                 {
-                    //支払う対象がユーザー名と同じまたは""の場合
-                    if (userNameText.text.Equals(calcItem.targetUserProperty[0]) || calcItem.targetUserProperty[0] == "")
-                    {
+                    //対象のユーザーが存在する場合と対象ユーザー数が0(全員)のとき
+                    if(calcItem.targetUserProperty.Contains(userNameText.text) || calcItem.targetUserProperty.Count == 0)
                         UserTotalMoney -= calcItem.incomeProperty / (calcItem.targetUserCountProperty - 1);
-                    }
+
                 }
             }
             //ユーザー一人あたりの収支を計算してtextに反映する
@@ -571,6 +577,24 @@ public class Utility : MonoBehaviour
                     GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text =
                     "¥" + contents.user[i].shousai[j].money.ToString("N0");
 
+                //ターゲットユーザーリストを格納
+                shousai.transform.GetChild(0).GetComponent<TargetUserList>().targetUserList
+                    = contents.user[i].shousai[j].targetUser;
+
+                foreach (string targetUser in contents.user[i].shousai[j].targetUser)
+                {
+                    if (targetUser == "指定なしfdhksjhfkjshdgakjdshfkjh")
+                    {
+                        shousai.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text
+                            = "指定なし";
+                    }
+                    else
+                    {
+                        shousai.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text
+                            = "指定あり";
+                    }
+                }
+
                 //Idを付与
                 shousai.GetComponent<Id>().id = contents.user[i].shousai[j].index;
             }
@@ -766,11 +790,11 @@ public class Utility : MonoBehaviour
     }
     /**
     <summary>
-        新しい項目を追加をボタンが押されたときの処理(引数：inputArea, contents, userArea)
+        新しい支払いを追加をボタンが押されたときの処理(引数：inputArea, contents, userArea, Tgl1, Tgl2)
         return : なし
     </summary>
     */
-    public static void onNewItemHozon(Transform inputArea, Contents contents, Transform UserArea)
+    public static void onNewItemHozon(Transform inputArea, Contents contents, Transform UserArea, Toggle Tgl1, Toggle Tgl2)
     {
         //項目
         Transform item =
@@ -798,22 +822,18 @@ public class Utility : MonoBehaviour
 
                 GameObject shousaiArea = getShousaiArea(UserArea);
                 Shousai shousai = new Shousai();
-                //TODOここuserareaに合わせてリファクタする
                 //項目
                 if ("​".Equals(ItemTxt))
                 {
                     shousai.ItemName = item.GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
-                    shousaiArea.transform.GetChild(1).GetComponent<Transform>().
-                        GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
-                        = shousai.ItemName;
                 }
                 else
                 {
                     shousai.ItemName = item.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
-                    shousaiArea.transform.GetChild(1).GetComponent<Transform>().
-                        GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
-                        = shousai.ItemName;
                 }
+                shousaiArea.transform.GetChild(1).GetComponent<Transform>().
+                    GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
+                    = shousai.ItemName;
                 //金額
                 if ("​".Equals(moneyTxt))
                 {
@@ -834,20 +854,49 @@ public class Utility : MonoBehaviour
                 if ("​".Equals(dateTxt))
                 {
                     shousai.date = Date.GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
-                    shousaiArea.transform.GetChild(1).GetComponent<Transform>().
-                        GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text
-                        = shousai.date.Substring(5);
                 }
                 else
                 {
                     shousai.date = Date.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
-                    shousaiArea.transform.GetChild(1).GetComponent<Transform>().
-                        GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text
-                        = shousai.date.Substring(5);
                 }
+                shousaiArea.transform.GetChild(1).GetComponent<Transform>().
+                    GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text
+                    = shousai.date.Substring(5);
 
+                //ターゲットユーザーリストを取得
+                List<string> targetUserList = getTargetUserList();
+
+                if (Tgl2.isOn)
+                {
+                    shousaiArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text
+                        = "指定なし";
+                    targetUserList.Clear();
+                    targetUserList.Add("指定なしfdhksjhfkjshdgakjdshfkjh");
+                }
+                else if (!Tgl1.isOn && !Tgl2.isOn)
+                {
+                    if (targetUserList.Count > 0)
+                    {
+                        shousaiArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = "指定あり";
+                    }
+                    else
+                    {
+                        shousaiArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text
+                        = "";
+                    }
+                }
+                else if (Tgl1.isOn)
+                {
+                    shousaiArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text
+                    = "";
+                }
+                shousaiArea.transform.GetChild(0).GetComponent<TargetUserList>().targetUserList
+                    = targetUserList;
+
+                shousai.targetUser = targetUserList;
+                Debug.Log(shousai.targetUser);
                 //Idを付与
-                shousai.index = generateShousaiIndex(UserArea, contents.user[i].shousai.Count);
+                shousai.index = generateShousaiIndex(UserArea);
                 shousaiArea.GetComponent<Id>().id = shousai.index;
 
                 //キャンバス更新
@@ -859,6 +908,9 @@ public class Utility : MonoBehaviour
                 //セーブする
                 contents.user[i].shousai.Add(shousai);
                 SaveManager.save(Controller.contentsStatus, contents);
+
+                //ターゲットユーザーを削除
+                deleteTargetUser();
                 break;
             }
         }
@@ -1006,7 +1058,7 @@ public class Utility : MonoBehaviour
         return : int index
     </summary>
     */
-    public static int generateShousaiIndex(Transform UserArea, int _index)
+    public static int generateShousaiIndex(Transform UserArea)
     {
         int index = 0;
         Transform tfm;
@@ -1161,7 +1213,7 @@ public class Utility : MonoBehaviour
         return : なし
     </summary>
     */
-    public static void editShousaiAreaHozon(Transform inputArea, Contents contents, Transform shousai)
+    public static void editShousaiAreaHozon(Transform inputArea, Contents contents, Transform shousai, Toggle Tgl1, Toggle Tgl2)
     {
 
         int shousaiId = shousai.GetComponent<Id>().id;
@@ -1180,6 +1232,8 @@ public class Utility : MonoBehaviour
         inputArea.GetChild(2).GetComponent<Transform>().
                 GetChild(0).GetComponent<Transform>().
                 GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
+        //ターゲットユーザーリストを取得
+        List<string> targetUserList = getTargetUserList();
 
         //UIに反映
         shousai.transform.GetChild(1).GetComponent<Transform>().
@@ -1191,6 +1245,28 @@ public class Utility : MonoBehaviour
         shousai.transform.GetChild(1).GetComponent<Transform>().
             GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text
             = "¥" + moneyTxt.ToString("N0");
+        if (Tgl2.isOn)
+        {
+            shousai.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text
+                = "指定なし";
+            targetUserList.Clear();
+            targetUserList.Add("指定なしfdhksjhfkjshdgakjdshfkjh");
+        }
+        else if (!Tgl1.isOn && !Tgl2.isOn)
+        {
+            if (targetUserList.Count == 0)
+                shousai.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = "";
+            else
+                shousai.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = "指定あり";
+        }
+        else if (Tgl1.isOn)
+        {
+            targetUserList.Clear();
+            shousai.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text
+            = "";
+        }
+        shousai.transform.GetChild(0).GetComponent<TargetUserList>().targetUserList
+            = targetUserList;
 
         //セーブデータに反映
         for (int i = 0; i < contents.user.Count; i++)
@@ -1204,6 +1280,7 @@ public class Utility : MonoBehaviour
                         contents.user[i].shousai[j].ItemName = itemTxt;
                         contents.user[i].shousai[j].money = moneyTxt;
                         contents.user[i].shousai[j].date = dateTxt;
+                        contents.user[i].shousai[j].targetUser = targetUserList;
                     }
                 }
             }
@@ -1211,6 +1288,9 @@ public class Utility : MonoBehaviour
 
         //セーブする
         SaveManager.save(Controller.contentsStatus, contents);
+
+        //ターゲットユーザーを削除
+        deleteTargetUser();
     }
     /**
     <summary>
@@ -1258,7 +1338,7 @@ public class Utility : MonoBehaviour
     /**
     <summary>
         選択されていないコンテンツ名を編集する
-        return : なし
+        return : string text
     </summary>
     */
     public static string removeContentNameFormat(string text)
@@ -1279,12 +1359,63 @@ public class Utility : MonoBehaviour
     {
         GameObject[] contents = GameObject.FindGameObjectsWithTag("ContentArea");
         GameObject[] allUserArea = GameObject.FindGameObjectsWithTag("UserArea");
-        foreach(GameObject content in contents)
+        foreach (GameObject content in contents)
             Destroy(content);
         foreach (GameObject userArea in allUserArea)
         {
             userArea.SetActive(false);
             Destroy(userArea);
         }
+    }
+    /**
+    <summary>
+        支払い対象ユーザーをクローンして返却
+        return : Transform 支払い対象ユーザー
+    </summary>
+    */
+    public static Transform getTargetUser(GameObject targetUserContent)
+    {
+        GameObject TargetUserContentClone = GameObject.FindGameObjectWithTag("TargetUserContentClone");
+        //子供を取得してアクティブにする
+        Transform targetUser_ = TargetUserContentClone.transform.GetChild(0).GetComponent<Transform>();
+        targetUser_.gameObject.SetActive(true);
+
+        Transform targetUser = Instantiate(targetUser_, Vector3.zero, Quaternion.identity, targetUserContent.transform);
+        targetUser_.gameObject.SetActive(false);
+
+        return targetUser;
+
+    }
+    /**
+    <summary>
+        支払い対象ユーザー(UI)のクローンを削除
+        return : なし
+    </summary>
+    */
+    public static void deleteTargetUser()
+    {
+        GameObject[] targetUsers = GameObject.FindGameObjectsWithTag("TargetUser");
+        foreach (GameObject targetUser in targetUsers)
+            Destroy(targetUser);
+    }
+    /**
+    <summary>
+        ターゲットユーザーリストを取得する
+        return : List<string> ユーザーリスト
+    </summary>
+    */
+    public static List<string> getTargetUserList()
+    {
+        List<string> targetUserList = new List<string>();
+        GameObject[] targetUserChecks = GameObject.FindGameObjectsWithTag("TargetUser");
+        foreach (GameObject targetUserCheck in targetUserChecks)
+        {
+            if (targetUserCheck.transform.GetChild(0).GetComponent<Transform>()
+                .GetChild(0).GetComponent<Image>().enabled)
+            {
+                targetUserList.Add(targetUserCheck.transform.GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text);
+            }
+        }
+        return targetUserList;
     }
 }

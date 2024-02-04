@@ -38,9 +38,9 @@ public static class SaveManager
         string json = JsonUtility.ToJson(contentsSd);
         //TODObuildするときはここを変更する
         // IOS(クラウドに保存されないような設定が必要)
-        // string path = Application.persistentDataPath;
+        string path = Application.persistentDataPath;
         // unity
-        string path = Directory.GetCurrentDirectory();
+        //string path = Directory.GetCurrentDirectory();
         path += ("/" + SAVE_DIRECTORY + "/" + SAVE_FILE_NAME + index.ToString() + SAVE_FILE_TAIL);
         createDirectory(Path.GetDirectoryName(path));
         StreamWriter writer = new StreamWriter(path, false, Encoding.GetEncoding("UTF-8"));
@@ -52,8 +52,10 @@ public static class SaveManager
     {
         if (1 >= saveDatas.Count)
             return;
-
-        string path = Directory.GetCurrentDirectory();
+        //TODObuildするときはここを変更する
+        // IOS(クラウドに保存されないような設定が必要)
+        string path = Application.persistentDataPath;
+        //string path = Directory.GetCurrentDirectory();
         path += ("/" + SAVE_DIRECTORY + "/" + SAVE_FILE_NAME + index.ToString() + SAVE_FILE_TAIL);
         File.Delete(path);
         saveDatas = new Dictionary<int, Contents>();
@@ -70,9 +72,9 @@ public static class SaveManager
         //TODObuildするときはここを変更する
         // プロジェクトディレクトリを取得    
         // IOS(クラウドに保存されないような設定が必要)
-        // string path = Application.persistentDataPath;
+        string path = Application.persistentDataPath;
         // unity
-        string path = Directory.GetCurrentDirectory();
+        //string path = Directory.GetCurrentDirectory();
         // セーブデータの保存先ディレクトリを取得
         path += ("/" + SAVE_DIRECTORY + "/");
         createDirectory(Path.GetDirectoryName(path));
@@ -117,6 +119,7 @@ public static class SaveManager
             shousai.index = 0;
             shousai.money = 1000;
             shousai.date = DateTime.Today.ToString("yyyy/M/d");
+            shousai.targetUser = new List<string>();
             user.shousai.Add(shousai);
             contentsSd.user.Add(user);
         }

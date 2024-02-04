@@ -1,10 +1,12 @@
 
+using System.Collections.Generic;
+
 public class CalcItem
 {
     //ユーザー名
     private string userName;
     //支払ってもらう対象のユーザー
-    private string[] targetUser;
+    private List<string> targetUser;
     //支払ってもらう対象のユーザーの数
     private int targetUserCount;
     //支出額
@@ -18,7 +20,7 @@ public class CalcItem
         set { this.userName = value; }
 
     }
-    public string[] targetUserProperty
+    public List<string> targetUserProperty
     {
         get { return targetUser; }
         set { this.targetUser = value; }

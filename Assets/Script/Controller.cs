@@ -15,6 +15,9 @@ public class Controller : MonoBehaviour
     [SerializeField] private GameObject covers;
     [SerializeField] private GameObject addition;
     [SerializeField] private GameObject dustBox;
+    [SerializeField] private Toggle Tgl1;
+    [SerializeField] private Toggle Tgl2;
+    [SerializeField] private Image cv;
     //キャッシュ用のオブジェクト
     private Transform inputArea;
     //新しい項目を追加をするボタン
@@ -35,6 +38,8 @@ public class Controller : MonoBehaviour
     private GameObject contentBtn;
     //矢印ボタン
     private GameObject arrowBtn;
+    //支払い対象のユーザーのチェックマーク
+    private Image targetUserCheckMark;
     //押したボタンの状態を管理
     private int btnStatus;
     //押したボタンを取得するためのGameObject型の変数
@@ -90,7 +95,7 @@ public class Controller : MonoBehaviour
                 {
                     userNamesList = Utility.getNewUserNames();
                 }
-                else if(buttonObTag == "shousaiArea")
+                else if (buttonObTag == "shousaiArea")
                 {
                     shousaiList = Utility.getNewShousai();
                 }
@@ -110,7 +115,7 @@ public class Controller : MonoBehaviour
             if (index == 0)
                 return;
         }
-        else if(buttonObTag == "shousaiArea")
+        else if (buttonObTag == "shousaiArea")
         {
             if (index == 0 || index == 1 || index == 2)
                 return;
@@ -140,7 +145,7 @@ public class Controller : MonoBehaviour
                 {
                     child.SetSiblingIndex(2);
                 }
-                else if(child.tag == "ContentbottomLeft")
+                else if (child.tag == "ContentbottomLeft")
                 {
                     child.SetSiblingIndex(0);
                 }
@@ -152,7 +157,7 @@ public class Controller : MonoBehaviour
                 shousaiList[i].GetComponent<ElementIndex>().Index = shousaiList[i].transform.GetSiblingIndex();
             }
         }
-        else if(buttonObTag == "userNameArea")
+        else if (buttonObTag == "userNameArea")
         {
             Transform UserNameAreaEdt = GameObject.FindGameObjectWithTag("UserNameAreaEdt").transform;
             foreach (Transform child in UserNameAreaEdt)
@@ -172,11 +177,11 @@ public class Controller : MonoBehaviour
     }
     /**
     <summary>
-        新たな項目を追加が押されたときの処理
+        新たな支払いを追加が押されたときの処理
         return : なし
     </summary>
     */
-    public void OnAddOrUpdateItemArea(int status)
+    public void OnAddOrUpdateShousaiArea(int status)
     {
         if (!editFlg)
             return;
@@ -188,14 +193,19 @@ public class Controller : MonoBehaviour
             GetChild(0).GetComponent<Transform>().
             GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
                 = DateTime.Today.ToString("yyyy/M/d");
+
+        GameObject parentObj = new GameObject();
+
         //押したボタンを取得
-        if(btnStatus == 1)
+        if (btnStatus == 1)
         {
             addItemBtn = eventSystem.currentSelectedGameObject;
+            parentObj = addItemBtn.transform.parent.gameObject;
         }
-        else if(btnStatus == 6)
+        else if (btnStatus == 6)
         {
             shousaiBtn = eventSystem.currentSelectedGameObject;
+            parentObj = shousaiBtn.transform.parent.gameObject;
             string date = "";
             //セーブデータ内のユーザーエリアと詳細エリアのIdを検索して日付を取得
             int UserAreaId = shousaiBtn.transform.parent.GetComponent<Id>().id;
@@ -232,14 +242,45 @@ public class Controller : MonoBehaviour
         {
             Transform child =
                     inputArea.transform.GetChild(i).GetComponent<Transform>();
-            if (child.tag == "AddUser" || child.tag == "AddContent" || child.tag == "DeleteContent")
+            if (child.tag == "AddUser" || child.tag == "AddContent" || child.tag == "DeleteContent" || child.tag == "Hozon")
             {
                 child.gameObject.SetActive(false);
             }
-            else if(child.tag == "AddItem")
+            else if (child.tag == "AddItem")
             {
                 child.gameObject.SetActive(true);
             }
+        }
+
+        //自分以外のユーザーの名前を格納
+        string currentUserName = parentObj.transform.GetChild(0).GetComponent<Transform>().
+            GetChild(0).GetComponent<Transform>().
+            GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
+        GameObject[] userNames = GameObject.FindGameObjectsWithTag("userNameArea");
+        GameObject targetUserContent = GameObject.FindGameObjectWithTag("TargetUserContent");
+        foreach (GameObject username in userNames)
+        {
+            string _username = username.transform.GetChild(0).GetComponent<Transform>().
+                GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
+            if (currentUserName == _username)
+                continue;
+            Transform targetUser = Utility.getTargetUser(targetUserContent);
+            targetUser.GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text = _username;
+            //ここでユーザー名が含まれている場合はtrueにする
+            if (btnStatus == 6 && shousaiBtn.transform.GetChild(0).GetComponent<TargetUserList>().targetUserList.Contains(_username))
+                targetUser.GetChild(0).GetComponent<Transform>().GetChild(0).GetComponent<Image>().enabled = true;
+        }
+        if (btnStatus == 6 && shousaiBtn.transform.GetChild(0).GetComponent<TargetUserList>().targetUserList.Contains("指定なしfdhksjhfkjshdgakjdshfkjh"))
+        {
+            Tgl2.isOn = true;
+        }
+        else if (btnStatus == 6 && shousaiBtn.transform.GetChild(0).GetComponent<TargetUserList>().targetUserList.Count < 1)
+        {
+            Tgl1.isOn = true;
+        }
+        else
+        {
+            Tgl1.isOn = false; Tgl2.isOn = false;
         }
     }
     /**
@@ -264,8 +305,6 @@ public class Controller : MonoBehaviour
         {
             Utility.onChangeNormalModeListener(shousaiList, ContensData.contents, scrollRect);
         }
-
-
         Utility.calcUserPeyment();
     }
     /**
@@ -282,11 +321,11 @@ public class Controller : MonoBehaviour
         btnStatus = status;
 
         //押したボタンを取得
-        if(btnStatus == 2)
+        if (btnStatus == 2)
         {
             addUserBtn = eventSystem.currentSelectedGameObject;
         }
-        else if(btnStatus == 5)
+        else if (btnStatus == 5)
         {
             userNameBtn = eventSystem.currentSelectedGameObject;
 
@@ -302,7 +341,7 @@ public class Controller : MonoBehaviour
         {
             Transform child =
                     inputArea.transform.GetChild(i).GetComponent<Transform>();
-            if (child.tag == "AddUser")
+            if (child.tag == "AddUser" || child.tag == "Hozon")
             {
                 child.gameObject.SetActive(true);
             }
@@ -347,7 +386,7 @@ public class Controller : MonoBehaviour
         {
             Transform child =
                     inputArea.transform.GetChild(i).GetComponent<Transform>();
-            if (child.tag == "AddContent")
+            if (child.tag == "AddContent" || child.tag == "Hozon")
             {
                 child.gameObject.SetActive(true);
             }
@@ -402,7 +441,7 @@ public class Controller : MonoBehaviour
         //ユーザーネームエリア
         userNameCheckBtn = eventSystem.currentSelectedGameObject;
         bool userNameCheckBtntatus = userNameCheckBtn.transform.GetChild(0).GetComponent<Image>().enabled;
-        
+
         //ユーザーエリア取得
         Transform userArea = userNameCheckBtn.transform.parent.parent.parent;
 
@@ -411,7 +450,6 @@ public class Controller : MonoBehaviour
         userArea.GetChild(1).GetComponent<Transform>().
             GetChild(0).GetComponent<Transform>().
             GetChild(1).GetComponent<Transform>();
-
 
 
         if (userNameCheckBtntatus)
@@ -461,15 +499,14 @@ public class Controller : MonoBehaviour
     {
         //TODOデータが存在しないときにここで削除するとエラーになる問題を解決する
         ContensData.contents = SaveManager.saveDatas[contentsStatus];
-        if(btnStatus == 3)
+        if (btnStatus == 3)
         {
             Utility.deleteShousaiArea(ContensData.contents);
         }
-        else if(btnStatus == 4)
+        else if (btnStatus == 4)
         {
             Utility.deleteUserArea(ContensData.contents);
         }
-        
     }
     /**
     <summary>
@@ -505,7 +542,7 @@ public class Controller : MonoBehaviour
             case 1:
                 //押したボタンの親オブジェクトを取得
                 Transform UserArea = addItemBtn.transform.parent;
-                Utility.onNewItemHozon(inputArea, ContensData.contents, UserArea);
+                Utility.onNewItemHozon(inputArea, ContensData.contents, UserArea, Tgl1, Tgl2);
                 break;
             case 2:
                 Utility.onNewUserHozon(inputArea, ContensData.contents);
@@ -514,7 +551,7 @@ public class Controller : MonoBehaviour
                 Utility.editUserNameAreaHozon(inputArea, ContensData.contents, userNameBtn.transform);
                 break;
             case 6:
-                Utility.editShousaiAreaHozon(inputArea, ContensData.contents, shousaiBtn.transform);
+                Utility.editShousaiAreaHozon(inputArea, ContensData.contents, shousaiBtn.transform, Tgl1, Tgl2);
                 break;
             case 7:
                 Utility.onNewContentHozon(inputArea, addContentBtn.transform.parent);
@@ -522,7 +559,6 @@ public class Controller : MonoBehaviour
             case 8:
                 Utility.editContentHozon(inputArea, contentBtn.transform);
                 break;
-
         }
         Utility.calcUserPeyment();
         inputFiled.SetActive(false);
@@ -535,6 +571,8 @@ public class Controller : MonoBehaviour
     */
     public void OnBatuButton()
     {
+        if (btnStatus == 1 || btnStatus == 6)
+            Utility.deleteTargetUser();
         inputFiled.SetActive(false);
     }
     /**
@@ -545,11 +583,11 @@ public class Controller : MonoBehaviour
     */
     public void OnNotSelectContent()
     {
-        
+
         //コンテンツを取得(選択されているコンテンツは対象外)
         contentBtn = eventSystem.currentSelectedGameObject;
         int contentId = contentBtn.transform.GetComponent<Id>().id;
-        if(contentId != contentsStatus)
+        if (contentId != contentsStatus)
         {
             Utility.loadNoSelectContent(contentId, contentBtn, contentsStatus);
             Utility.calcUserPeyment();
@@ -598,5 +636,40 @@ public class Controller : MonoBehaviour
         userArea.gameObject.SetActive(false);
         Canvas.ForceUpdateCanvases();
         userArea.gameObject.SetActive(true);
+    }
+    /**
+    <summary>
+        Toggleを変更されたときの処理
+        return : なし
+    </summary>
+    */
+    public void ChengeToggle()
+    {
+        if (!Tgl1.isOn && !Tgl2.isOn)
+        {
+            cv.enabled = false;
+        }
+        else
+        {
+            cv.enabled = true;
+        }
+    }
+    /**
+    <summary>
+        支払い対象のチェックマークが押されたときの処理
+        return : なし
+    </summary>
+    */
+    public void ChengeTargetUserCheck()
+    {
+        targetUserCheckMark = eventSystem.currentSelectedGameObject.transform.GetChild(0).GetComponent<Image>();
+        if (targetUserCheckMark.enabled)
+        {
+            targetUserCheckMark.enabled = false;
+        }
+        else
+        {
+            targetUserCheckMark.enabled = true;
+        }
     }
 }

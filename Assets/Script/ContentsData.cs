@@ -29,6 +29,7 @@ public class Shousai
     public int index;
     public int money;
     public string date;
+    public List<string> targetUser;
 }
 
 public static class ContensData

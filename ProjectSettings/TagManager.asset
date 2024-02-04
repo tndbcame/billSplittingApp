@@ -33,6 +33,13 @@ TagManager:
   - userNameAreaClone
   - AddContentArea
   - DeleteContent
+  - Hozon
+  - cv
+  - TargetUserContent
+  - TargetUserContentClone
+  - TargetUser
+  - TargetUserText
+  - TargetUserTextCheck
   layers:
   - Default
   - TransparentFX
