@@ -40,6 +40,9 @@ TagManager:
   - TargetUser
   - TargetUserText
   - TargetUserTextCheck
+  - ShiharaiPlaceholder
+  - DatePlaceholder
+  - MoneyPlaceholder
   layers:
   - Default
   - TransparentFX

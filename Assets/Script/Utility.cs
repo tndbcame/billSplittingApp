@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Kyub.EmojiSearch.UI;
@@ -563,9 +564,20 @@ public class Utility : MonoBehaviour
                 }
 
                 //項目名を格納
-                shousai.transform.GetChild(1).GetComponent<Transform>().
+                //文字数が13文字かチェック
+                if (isValidStr(contents.user[i].shousai[j].ItemName, 13))
+                {
+                    shousai.transform.GetChild(1).GetComponent<Transform>().
+                    GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text =
+                    contents.user[i].shousai[j].ItemName.Substring(0, 12) + "…";
+                }
+                else
+                {
+                    shousai.transform.GetChild(1).GetComponent<Transform>().
                     GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text =
                     contents.user[i].shousai[j].ItemName;
+                }
+                
 
                 //日付を格納
                 shousai.transform.GetChild(1).GetComponent<Transform>().
@@ -823,6 +835,7 @@ public class Utility : MonoBehaviour
                 GameObject shousaiArea = getShousaiArea(UserArea);
                 Shousai shousai = new Shousai();
                 //項目
+                //空文字の場合
                 if ("​".Equals(ItemTxt))
                 {
                     shousai.ItemName = item.GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
@@ -831,11 +844,17 @@ public class Utility : MonoBehaviour
                 {
                     shousai.ItemName = item.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
                 }
-                shousaiArea.transform.GetChild(1).GetComponent<Transform>().
+                //文字数が14文字以降の場合
+                if (isValidStr(shousai.ItemName, 13))
+                {
+                    shousaiArea.transform.GetChild(1).GetComponent<Transform>().
                     GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
-                    = shousai.ItemName;
+                    = shousai.ItemName.Substring(0, 12) + "…";
+                }
+
                 //金額
-                if ("​".Equals(moneyTxt))
+                //空文字または9文字以降の場合
+                if ("​".Equals(moneyTxt) || isValidStr(moneyTxt, 8))
                 {
                     shousai.money = int.Parse(Regex.Replace(money.GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text, @"[^0-9]", ""));
                     shousaiArea.transform.GetChild(1).GetComponent<Transform>().
@@ -844,14 +863,14 @@ public class Utility : MonoBehaviour
                 }
                 else
                 {
-                    Debug.Log(moneyTxt);
                     shousai.money = int.Parse(Regex.Replace(money.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text, @"[^0-9]", ""));
                     shousaiArea.transform.GetChild(1).GetComponent<Transform>().
                             GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text
                             = "¥" + shousai.money.ToString("N0");
                 }
                 //日付
-                if ("​".Equals(dateTxt))
+                //空文字または有効な日付でない場合
+                if ("​".Equals(dateTxt) || !(isValidDate(dateTxt)))
                 {
                     shousai.date = Date.GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
                 }
@@ -894,7 +913,6 @@ public class Utility : MonoBehaviour
                     = targetUserList;
 
                 shousai.targetUser = targetUserList;
-                Debug.Log(shousai.targetUser);
                 //Idを付与
                 shousai.index = generateShousaiIndex(UserArea);
                 shousaiArea.GetComponent<Id>().id = shousai.index;
@@ -941,7 +959,7 @@ public class Utility : MonoBehaviour
         int id = generateUserAreaIndex();
         userArea.GetComponent<Id>().id = id;
         userArea.transform.GetChild(0).GetComponent<Id>().id = id;
-        userArea.transform.GetChild(2).GetComponent<Id>().id = contents.user.Count;
+        userArea.transform.GetChild(2).GetComponent<Id>().id = 0;
         user.index = id;
 
         //ユーザー名をUIに反映
@@ -966,10 +984,11 @@ public class Utility : MonoBehaviour
         user.userName = userNameTxt;
         user.shousai = new List<Shousai>();
         Shousai shousai = new Shousai();
-        shousai.ItemName = "項目名";
+        shousai.ItemName = "支払い名";
         shousai.index = 0;
         shousai.money = 1000;
         shousai.date = DateTime.Today.ToString("yyyy/M/d");
+        shousai.targetUser = getTargetUserList();
         user.shousai.Add(shousai);
         contents.user.Add(user);
 
@@ -1017,9 +1036,16 @@ public class Utility : MonoBehaviour
         {
             contentNameTxt = contentName.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
         }
-
         //UIに格納
-        contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = contentNameTxt;
+        //10文字以降は...で表示する
+        if (isValidStr(contentNameTxt, 11))
+        {
+            contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = contentNameTxt.Substring(0, 10) + "…";
+        }
+        else
+        {
+            contentArea.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = contentNameTxt;
+        }
         contentArea.transform.GetComponent<Id>().id = nums.Max() + 1;
 
         //セーブデータに格納してセーブする
@@ -1039,17 +1065,24 @@ public class Utility : MonoBehaviour
     */
     public static string generateNotDuplicates(string userNameTxt, Contents contents)
     {
+        //今あるユーザー名リストを作成
+        List<string> userNameList = new List<string>();
+        for (int i = 0; i < contents.user.Count; i++)
+            userNameList.Add(contents.user[i].userName);
+
+        //重複があった場合は+1する
         int j = 0;
         string _userNameTxt = userNameTxt;
         for (int i = 0; i < contents.user.Count; i++)
         {
-            if (userNameTxt == contents.user[i].userName)
+            if (userNameList.Contains(userNameTxt))
             {
                 j++;
                 userNameTxt = _userNameTxt + j;
                 i = 0;
             }
         }
+
         return userNameTxt;
     }
     /**
@@ -1190,6 +1223,17 @@ public class Utility : MonoBehaviour
                 GetChild(0).GetComponent<Transform>().
                 GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
 
+        if ("​".Equals(userNameTxt))
+        {
+            //プレースホルダーから取得
+            userNameTxt = inputArea.transform.GetChild(7).GetComponent<Transform>().
+                GetChild(0).GetComponent<Transform>().
+                GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
+        }
+
+        //重複しないように変更
+        userNameTxt = generateNotDuplicates(userNameTxt, contents);
+
         //UIに反映
         userName.transform.GetChild(0).GetComponent<Transform>().
             GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
@@ -1227,24 +1271,38 @@ public class Utility : MonoBehaviour
         inputArea.GetChild(1).GetComponent<Transform>().
                 GetChild(0).GetComponent<Transform>().
                 GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
-        int moneyTxt = int.Parse(Regex.Replace(moneyTxt_, @"[^0-9]", ""));
         string dateTxt =
         inputArea.GetChild(2).GetComponent<Transform>().
                 GetChild(0).GetComponent<Transform>().
                 GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
+
+        //空文字の場合
+        if ("​".Equals(itemTxt))
+        {
+            itemTxt = inputArea.GetChild(0).GetComponent<Transform>().
+                GetChild(0).GetComponent<Transform>().
+                GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
+        }
+        if ("​".Equals(moneyTxt_) || isValidStr(moneyTxt_, 8))
+        {
+            moneyTxt_ = inputArea.GetChild(1).GetComponent<Transform>().
+                GetChild(0).GetComponent<Transform>().
+                GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
+        }
+        if ("​".Equals(dateTxt) || !(isValidDate(dateTxt)))
+        {
+            dateTxt = inputArea.GetChild(2).GetComponent<Transform>().
+                GetChild(0).GetComponent<Transform>().
+                GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
+        }
+        //金額はint型に変換する
+        int moneyTxt = int.Parse(Regex.Replace(moneyTxt_, @"[^0-9]", ""));
+
+
         //ターゲットユーザーリストを取得
         List<string> targetUserList = getTargetUserList();
 
-        //UIに反映
-        shousai.transform.GetChild(1).GetComponent<Transform>().
-            GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
-            = itemTxt;
-        shousai.transform.GetChild(1).GetComponent<Transform>().
-            GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text
-            = dateTxt.Substring(5);
-        shousai.transform.GetChild(1).GetComponent<Transform>().
-            GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text
-            = "¥" + moneyTxt.ToString("N0");
+        //ユーザー指定処理
         if (Tgl2.isOn)
         {
             shousai.transform.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text
@@ -1286,6 +1344,22 @@ public class Utility : MonoBehaviour
             }
         }
 
+        if (isValidStr(itemTxt, 13))
+        {
+            itemTxt = itemTxt.Substring(0, 12) + "…";
+        }
+
+        //UIに反映
+        shousai.transform.GetChild(1).GetComponent<Transform>().
+            GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
+            = itemTxt;
+        shousai.transform.GetChild(1).GetComponent<Transform>().
+            GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text
+            = dateTxt.Substring(5);
+        shousai.transform.GetChild(1).GetComponent<Transform>().
+            GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text
+            = "¥" + moneyTxt.ToString("N0");
+
         //セーブする
         SaveManager.save(Controller.contentsStatus, contents);
 
@@ -1312,6 +1386,7 @@ public class Utility : MonoBehaviour
         {
             if (contentAreaId == content.fileNo)
             {
+                //空文字の場合
                 if ("​".Equals(contentName.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text))
                 {
                     //プレースホルダー
@@ -1321,8 +1396,15 @@ public class Utility : MonoBehaviour
                 {
                     contentNameTxt = contentName.GetChild(2).GetComponent<TMP_EmojiTextUGUI>().text;
                 }
-                content.contentsName = contentNameTxt;
-                contentArea.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = contentNameTxt;
+                //10文字以降は...で表示する
+                if (isValidStr(contentNameTxt, 11))
+                {
+                    contentArea.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = contentNameTxt.Substring(0, 10) + "…";
+                }
+                else
+                {
+                    contentArea.GetChild(0).GetComponent<TMP_EmojiTextUGUI>().text = contentNameTxt;
+                }
                 processContentName(contentArea.gameObject, content);
                 contentArea.gameObject.SetActive(false);
                 Canvas.ForceUpdateCanvases();
@@ -1417,5 +1499,29 @@ public class Utility : MonoBehaviour
             }
         }
         return targetUserList;
+    }
+
+    private static bool isValidStr(string itemTxt, int validNum)
+    {
+        if (itemTxt.Length > validNum)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    /**
+    <summary>
+        日付が有効な形式かチェックする
+        return : bool
+    </summary>
+    */
+    public static bool isValidDate(string val)
+    {
+        val = Regex.Replace(val, @"[^0-9]", "");
+        bool result = Regex.IsMatch(val, "^(?:[0-9]{4}|\\*)(?:0?[1-9]|1[0-2]|\\*)(?:0?[1-9]|[12][0-9]|3[01]|\\*)$");
+        return result;
     }
 }

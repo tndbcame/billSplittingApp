@@ -4,6 +4,7 @@ using Kyub.EmojiSearch.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class Controller : MonoBehaviour
@@ -42,6 +43,10 @@ public class Controller : MonoBehaviour
     private Image targetUserCheckMark;
     //押したボタンの状態を管理
     private int btnStatus;
+    //詳細エリアの削除できるかどうかの状態管理
+    private bool shousaiDeleteBtnStatus = false;
+    //ユーザーの削除できるかどうかの状態管理
+    private bool userDeleteBtnStatus = false;
     //押したボタンを取得するためのGameObject型の変数
     private GameObject button_ob;
     //長押しの判定時間
@@ -188,54 +193,6 @@ public class Controller : MonoBehaviour
         btnStatus = status;
         inputFiled.SetActive(true);
 
-        //プレースホルダーに本日の日付を入力する
-        inputArea.GetChild(2).GetComponent<Transform>().
-            GetChild(0).GetComponent<Transform>().
-            GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text
-                = DateTime.Today.ToString("yyyy/M/d");
-
-        GameObject parentObj = new GameObject();
-
-        //押したボタンを取得
-        if (btnStatus == 1)
-        {
-            addItemBtn = eventSystem.currentSelectedGameObject;
-            parentObj = addItemBtn.transform.parent.gameObject;
-        }
-        else if (btnStatus == 6)
-        {
-            shousaiBtn = eventSystem.currentSelectedGameObject;
-            parentObj = shousaiBtn.transform.parent.gameObject;
-            string date = "";
-            //セーブデータ内のユーザーエリアと詳細エリアのIdを検索して日付を取得
-            int UserAreaId = shousaiBtn.transform.parent.GetComponent<Id>().id;
-            int shousaiAreaId = shousaiBtn.transform.GetComponent<Id>().id;
-            for (int i = 0; i < ContensData.contents.user.Count; i++)
-            {
-                if (ContensData.contents.user[i].index == UserAreaId)
-                {
-                    for (int j = 0; j < ContensData.contents.user[i].shousai.Count; j++)
-                    {
-                        if (ContensData.contents.user[i].shousai[j].index == shousaiAreaId)
-                        {
-                            date = ContensData.contents.user[i].shousai[j].date;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            inputArea.GetChild(0).GetComponent<TMP_InputField>().text
-                = shousaiBtn.transform.GetChild(1).GetComponent<Transform>().
-                    GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
-            inputArea.GetChild(1).GetComponent<TMP_InputField>().text
-                = shousaiBtn.transform.GetChild(1).GetComponent<Transform>().
-                    GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text;
-            //日付は形式が異なるためセーブデータから直接取得する
-            inputArea.GetChild(2).GetComponent<TMP_InputField>().text
-                = date;
-        }
-
         //子を取得して関係ないオブジェクトをfalseにする
         int childCount = inputArea.transform.childCount;
         for (int i = 0; i < childCount; i++)
@@ -250,6 +207,64 @@ public class Controller : MonoBehaviour
             {
                 child.gameObject.SetActive(true);
             }
+        }
+
+        GameObject parentObj = new GameObject();
+
+        //日付のプレースホルダーは更新するため
+        Transform datePlaceholder = GameObject.FindGameObjectWithTag("DatePlaceholder").transform;
+
+        //押したボタンを取得
+        if (btnStatus == 1)
+        {
+            addItemBtn = eventSystem.currentSelectedGameObject;
+            parentObj = addItemBtn.transform.parent.gameObject;
+
+            //日付プレースホルダーに本日の日付を入力する
+            datePlaceholder.GetComponent<TMP_EmojiTextUGUI>().text
+                = DateTime.Today.ToString("yyyy/M/d");
+        }
+        else if (btnStatus == 6)
+        {
+            shousaiBtn = eventSystem.currentSelectedGameObject;
+            parentObj = shousaiBtn.transform.parent.gameObject;
+            string date = "";
+            string shiharai = "";
+            //セーブデータ内のユーザーエリアと詳細エリアのIdを検索して日付と支払い名を取得
+            int UserAreaId = shousaiBtn.transform.parent.GetComponent<Id>().id;
+            int shousaiAreaId = shousaiBtn.transform.GetComponent<Id>().id;
+            for (int i = 0; i < ContensData.contents.user.Count; i++)
+            {
+                if (ContensData.contents.user[i].index == UserAreaId)
+                {
+                    for (int j = 0; j < ContensData.contents.user[i].shousai.Count; j++)
+                    {
+                        if (ContensData.contents.user[i].shousai[j].index == shousaiAreaId)
+                        {
+                            date = ContensData.contents.user[i].shousai[j].date;
+                            shiharai = ContensData.contents.user[i].shousai[j].ItemName;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            //支払い名
+            inputArea.GetChild(0).GetComponent<TMP_InputField>().text
+                = shiharai;
+
+            //金額
+            inputArea.GetChild(1).GetComponent<TMP_InputField>().text
+                = shousaiBtn.transform.GetChild(1).GetComponent<Transform>().
+                    GetChild(3).GetComponent<TMP_EmojiTextUGUI>().text;
+
+            //日付は形式が異なるためセーブデータから直接取得する
+            //入力値
+            inputArea.GetChild(2).GetComponent<TMP_InputField>().text
+                = date;
+            //プレースホルダー
+            datePlaceholder.GetComponent<TMP_EmojiTextUGUI>().text
+                = date;
         }
 
         //自分以外のユーザーの名前を格納
@@ -320,21 +335,6 @@ public class Controller : MonoBehaviour
         inputFiled.SetActive(true);
         btnStatus = status;
 
-        //押したボタンを取得
-        if (btnStatus == 2)
-        {
-            addUserBtn = eventSystem.currentSelectedGameObject;
-        }
-        else if (btnStatus == 5)
-        {
-            userNameBtn = eventSystem.currentSelectedGameObject;
-
-            inputArea.GetChild(7).
-                transform.GetComponent<TMP_InputField>().text
-                = userNameBtn.transform.GetChild(0).GetComponent<Transform>().
-                    GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
-        }
-
         //子を取得して関係ないオブジェクトをfalseにする
         int childCount = inputArea.transform.childCount;
         for (int i = 0; i < childCount; i++)
@@ -349,6 +349,21 @@ public class Controller : MonoBehaviour
             {
                 child.gameObject.SetActive(false);
             }
+        }
+
+        //押したボタンを取得
+        if (btnStatus == 2)
+        {
+            addUserBtn = eventSystem.currentSelectedGameObject;
+        }
+        else if (btnStatus == 5)
+        {
+            userNameBtn = eventSystem.currentSelectedGameObject;
+
+            inputArea.GetChild(7).
+                transform.GetComponent<TMP_InputField>().text
+                = userNameBtn.transform.GetChild(0).GetComponent<Transform>().
+                    GetChild(1).GetComponent<TMP_EmojiTextUGUI>().text;
         }
     }
     /**
@@ -420,13 +435,13 @@ public class Controller : MonoBehaviour
         {
             shousaiCheckBtn.transform.GetChild(0).GetComponent<Image>().enabled = false;
             shousaiCheckBtn.transform.GetChild(1).GetComponent<Image>().enabled = false;
-            btnStatus = 0;
+            shousaiDeleteBtnStatus = false;
         }
         else
         {
             shousaiCheckBtn.transform.GetChild(0).GetComponent<Image>().enabled = true;
             shousaiCheckBtn.transform.GetChild(1).GetComponent<Image>().enabled = true;
-            btnStatus = 3;
+            shousaiDeleteBtnStatus = true;
         }
         Utility.calcUserPeyment();
     }
@@ -468,7 +483,7 @@ public class Controller : MonoBehaviour
                 shousaiArea.transform.GetChild(0).GetComponent<Image>().enabled = false;
                 shousaiArea.transform.GetChild(1).GetComponent<Image>().enabled = false;
             }
-            btnStatus = 0;
+            userDeleteBtnStatus = false;
         }
         else
         {
@@ -485,7 +500,7 @@ public class Controller : MonoBehaviour
                 shousaiArea.transform.GetChild(0).GetComponent<Image>().enabled = true;
                 shousaiArea.transform.GetChild(1).GetComponent<Image>().enabled = true;
             }
-            btnStatus = 4;
+            userDeleteBtnStatus = true;
         }
         Utility.calcUserPeyment();
     }
@@ -499,11 +514,11 @@ public class Controller : MonoBehaviour
     {
         //TODOデータが存在しないときにここで削除するとエラーになる問題を解決する
         ContensData.contents = SaveManager.saveDatas[contentsStatus];
-        if (btnStatus == 3)
+        if (shousaiDeleteBtnStatus)
         {
             Utility.deleteShousaiArea(ContensData.contents);
         }
-        else if (btnStatus == 4)
+        if (userDeleteBtnStatus)
         {
             Utility.deleteUserArea(ContensData.contents);
         }
@@ -601,6 +616,9 @@ public class Controller : MonoBehaviour
     */
     public void OnArrowBtn()
     {
+        if (!editFlg)
+            return;
+
         //矢印ボタンを取得
         arrowBtn = eventSystem.currentSelectedGameObject;
         Transform arrow = arrowBtn.transform.GetChild(1).GetComponent<Transform>();
@@ -671,5 +689,15 @@ public class Controller : MonoBehaviour
         {
             targetUserCheckMark.enabled = true;
         }
+    }
+    /**
+    <summary>
+        設定画面へ繊維
+        return : なし
+    </summary>
+    */
+    public void ChengeScreenToSetting()
+    {
+        SceneManager.LoadScene("Setting");
     }
 }

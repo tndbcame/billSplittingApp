@@ -35,12 +35,14 @@ public static class SaveManager
         contentsSd.fileNo = index;
         contentsSd.updateTime = DateTime.Now.ToString();
         contentsSd.name = "セーブデータ" + index.ToString();
+        //コンテンツデータを更新
+        saveDatas[index] = contentsSd;
         string json = JsonUtility.ToJson(contentsSd);
         //TODObuildするときはここを変更する
         // IOS(クラウドに保存されないような設定が必要)
-        string path = Application.persistentDataPath;
+        //string path = Application.persistentDataPath;
         // unity
-        //string path = Directory.GetCurrentDirectory();
+        string path = Directory.GetCurrentDirectory();
         path += ("/" + SAVE_DIRECTORY + "/" + SAVE_FILE_NAME + index.ToString() + SAVE_FILE_TAIL);
         createDirectory(Path.GetDirectoryName(path));
         StreamWriter writer = new StreamWriter(path, false, Encoding.GetEncoding("UTF-8"));
@@ -48,18 +50,43 @@ public static class SaveManager
         writer.Flush();
         writer.Close();
     }
+    /**
+    <summary>
+        データを削除する。ただしSaveDataの数が残り一つの場合は削除できない
+        return : なし
+    </summary>
+    */
     public static void delete(int index)
     {
         if (1 >= saveDatas.Count)
             return;
         //TODObuildするときはここを変更する
         // IOS(クラウドに保存されないような設定が必要)
-        string path = Application.persistentDataPath;
-        //string path = Directory.GetCurrentDirectory();
+        //string path = Application.persistentDataPath;
+        string path = Directory.GetCurrentDirectory();
         path += ("/" + SAVE_DIRECTORY + "/" + SAVE_FILE_NAME + index.ToString() + SAVE_FILE_TAIL);
         File.Delete(path);
         saveDatas = new Dictionary<int, Contents>();
         getSaveData();
+    }
+    /**
+    <summary>
+        フォルダごとすべてのセーブデータを削除する
+        return : なし
+    </summary>
+    */
+    public static void deleteAllSaveData()
+    {
+        //string path = Application.persistentDataPath;
+        string path = Directory.GetCurrentDirectory();
+        path += ("/" + SAVE_DIRECTORY);
+        if (Directory.Exists(path))
+        {
+            Directory.Delete(path, true);
+            //static変数を初期化
+            saveDatas = new Dictionary<int, Contents>();
+        }
+            
     }
     /**
     <summary>
@@ -72,9 +99,9 @@ public static class SaveManager
         //TODObuildするときはここを変更する
         // プロジェクトディレクトリを取得    
         // IOS(クラウドに保存されないような設定が必要)
-        string path = Application.persistentDataPath;
+        //string path = Application.persistentDataPath;
         // unity
-        //string path = Directory.GetCurrentDirectory();
+        string path = Directory.GetCurrentDirectory();
         // セーブデータの保存先ディレクトリを取得
         path += ("/" + SAVE_DIRECTORY + "/");
         createDirectory(Path.GetDirectoryName(path));
@@ -111,11 +138,11 @@ public static class SaveManager
         for (int i = 1; i < 3; i++)
         {
             User user = new User();
-            user.userName = "ユーザー" + i;
+            user.userName = "ユーザー名" + i;
             user.index = i - 1;
             user.shousai = new List<Shousai>();
             Shousai shousai = new Shousai();
-            shousai.ItemName = "項目名";
+            shousai.ItemName = "支払い名";
             shousai.index = 0;
             shousai.money = 1000;
             shousai.date = DateTime.Today.ToString("yyyy/M/d");
