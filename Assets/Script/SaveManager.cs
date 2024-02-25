@@ -40,9 +40,9 @@ public static class SaveManager
         string json = JsonUtility.ToJson(contentsSd);
         //TODObuildするときはここを変更する
         // IOS(クラウドに保存されないような設定が必要)
-        //string path = Application.persistentDataPath;
+        string path = Application.persistentDataPath;
         // unity
-        string path = Directory.GetCurrentDirectory();
+        //string path = Directory.GetCurrentDirectory();
         path += ("/" + SAVE_DIRECTORY + "/" + SAVE_FILE_NAME + index.ToString() + SAVE_FILE_TAIL);
         createDirectory(Path.GetDirectoryName(path));
         StreamWriter writer = new StreamWriter(path, false, Encoding.GetEncoding("UTF-8"));
@@ -62,8 +62,8 @@ public static class SaveManager
             return;
         //TODObuildするときはここを変更する
         // IOS(クラウドに保存されないような設定が必要)
-        //string path = Application.persistentDataPath;
-        string path = Directory.GetCurrentDirectory();
+        string path = Application.persistentDataPath;
+        //string path = Directory.GetCurrentDirectory();
         path += ("/" + SAVE_DIRECTORY + "/" + SAVE_FILE_NAME + index.ToString() + SAVE_FILE_TAIL);
         File.Delete(path);
         saveDatas = new Dictionary<int, Contents>();
@@ -77,8 +77,8 @@ public static class SaveManager
     */
     public static void deleteAllSaveData()
     {
-        //string path = Application.persistentDataPath;
-        string path = Directory.GetCurrentDirectory();
+        string path = Application.persistentDataPath;
+        //string path = Directory.GetCurrentDirectory();
         path += ("/" + SAVE_DIRECTORY);
         if (Directory.Exists(path))
         {
@@ -99,9 +99,9 @@ public static class SaveManager
         //TODObuildするときはここを変更する
         // プロジェクトディレクトリを取得    
         // IOS(クラウドに保存されないような設定が必要)
-        //string path = Application.persistentDataPath;
+        string path = Application.persistentDataPath;
         // unity
-        string path = Directory.GetCurrentDirectory();
+        //string path = Directory.GetCurrentDirectory();
         // セーブデータの保存先ディレクトリを取得
         path += ("/" + SAVE_DIRECTORY + "/");
         createDirectory(Path.GetDirectoryName(path));

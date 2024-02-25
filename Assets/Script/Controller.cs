@@ -19,6 +19,7 @@ public class Controller : MonoBehaviour
     [SerializeField] private Toggle Tgl1;
     [SerializeField] private Toggle Tgl2;
     [SerializeField] private Image cv;
+    [SerializeField] private ReOrderableList reOrderableList;
     //キャッシュ用のオブジェクト
     private Transform inputArea;
     //新しい項目を追加をするボタン
@@ -95,6 +96,8 @@ public class Controller : MonoBehaviour
                 covers.SetActive(true);
                 addition.SetActive(false);
                 dustBox.SetActive(false);
+                reOrderableList.Interactable = true;
+                reOrderableList.Orderable = true;
                 Utility.onChangeEditMode(button_ob, scrollRect, buttonObTag);
                 if (buttonObTag == "userNameArea")
                 {
@@ -312,6 +315,8 @@ public class Controller : MonoBehaviour
         covers.SetActive(false);
         addition.SetActive(true);
         dustBox.SetActive(true);
+        reOrderableList.Interactable = false;
+        reOrderableList.Orderable = false;
         if (editStatus == 1)
         {
             Utility.onChangeNormalModeListener(userNamesList, ContensData.contents, scrollRect);
